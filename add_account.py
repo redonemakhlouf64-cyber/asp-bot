@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-add_account.py - v6.3
-Auto-login FB accounts via mbasic and save cookies as GitHub secrets.
+add_account.py - v6.4
+Auto-login FB via residential proxy and save cookies as GitHub secrets.
 """
 import os
 import sys
@@ -12,13 +12,14 @@ import imaplib
 import email as email_lib
 from base64 import b64encode
 from urllib import request as urlreq
+from urllib.parse import urlparse
 from urllib.error import HTTPError
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 from nacl import encoding, public
 
 API_BASE = "https://api.github.com/repos/"
-FB_MBASIC = "https://mbasic.facebook.com"
 FB_WWW = "https://www.facebook.com"
+FB_MBASIC = "https://mbasic.facebook.com"
 
 REPO = os.environ.get("GITHUB_REPOSITORY", "")
 GH_PAT = os.environ.get("GH_PAT", "")
@@ -28,16 +29,35 @@ GMAIL_APP_PW = os.environ.get("GMAIL_APP_PW", "")
 ACCOUNT_NUM = os.environ.get("ACCOUNT_NUM", "").strip()
 MANUAL_CODE = os.environ.get("MANUAL_CODE", "").strip()
 FORCE_ALL = os.environ.get("FORCE_ALL", "false").lower() == "true"
+PROXY_URL = os.environ.get("PROXY_URL", "").strip()
 
-MOBILE_UA = (
-    "Mozilla/5.0 (Linux; Android 12; SM-G991B) "
+DESKTOP_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/120.0.0.0 Mobile Safari/537.36"
+    "Chrome/120.0.0.0 Safari/537.36"
 )
 
 
 def log(msg):
     print("[add_account] " + str(msg), flush=True)
+
+
+def parse_proxy():
+    if not PROXY_URL:
+        return None
+    try:
+        p = urlparse(PROXY_URL)
+        if not p.hostname or not p.port:
+            return None
+        cfg = {"server": (p.scheme or "http") + "://" + p.hostname + ":" + str(p.port)}
+        if p.username:
+            cfg["username"] = p.username
+        if p.password:
+            cfg["password"] = p.password
+        return cfg
+    except Exception as e:
+        log("Proxy parse error: " + str(e))
+        return None
 
 
 def _http_request(method, url, headers=None, data=None, silent=False):
@@ -182,10 +202,10 @@ def parse_accounts(s):
 
 def _click_any_submit(page):
     for sel in [
-        'input[type="submit"][name="login"]',
         'button[name="login"]',
-        'input[type="submit"]',
+        'input[type="submit"][name="login"]',
         'button[type="submit"]',
+        'input[type="submit"]',
     ]:
         try:
             el = page.query_selector(sel)
@@ -197,49 +217,83 @@ def _click_any_submit(page):
     return False
 
 
+def _dismiss_cookie_banner(page):
+    for sel in [
+        '[data-cookiebanner="accept_only_essential_button"]',
+        'button[data-cookiebanner="accept_button"]',
+        'button[title="Only allow essential cookies"]',
+        'button[title="Allow all cookies"]',
+    ]:
+        try:
+            btn = page.query_selector(sel)
+            if btn:
+                btn.click()
+                log("Dismissed cookie banner")
+                time.sleep(2)
+                return True
+        except Exception:
+            continue
+    return False
+
+
 def login_account(email_addr, password, account_num):
     log("Login attempt acc #" + str(account_num) + ": " + email_addr[:3] + "***")
+    proxy_cfg = parse_proxy()
+    if proxy_cfg:
+        log("Using proxy: " + proxy_cfg["server"])
+    else:
+        log("WARNING: No proxy configured, FB will likely block.")
+
     with sync_playwright() as pw:
         browser = pw.chromium.launch(
             headless=True,
+            proxy=proxy_cfg,
             args=[
                 "--no-sandbox",
                 "--disable-blink-features=AutomationControlled",
                 "--disable-dev-shm-usage",
+                "--disable-gpu",
             ],
         )
         context = browser.new_context(
-            user_agent=MOBILE_UA,
-            viewport={"width": 412, "height": 915},
+            user_agent=DESKTOP_UA,
+            viewport={"width": 1366, "height": 768},
             locale="en-US",
-            java_script_enabled=True,
+            timezone_id="America/New_York",
+        )
+        context.add_init_script(
+            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"
         )
         page = context.new_page()
         try:
-            log("Opening mbasic login...")
-            page.goto(FB_MBASIC + "/login.php", wait_until="domcontentloaded", timeout=60000)
-            time.sleep(2)
+            log("Opening FB login via proxy...")
+            page.goto(FB_WWW + "/login.php", wait_until="domcontentloaded", timeout=90000)
+            time.sleep(4)
             log("After goto URL: " + page.url)
 
+            _dismiss_cookie_banner(page)
+
             try:
-                page.wait_for_selector('input[name="email"]', timeout=20000)
+                page.wait_for_selector('input[name="email"]', timeout=30000)
             except PWTimeout:
-                log("Email input not found. URL: " + page.url)
+                log("Email input not found on www. URL: " + page.url)
+                log("Trying mbasic fallback...")
+                page.goto(FB_MBASIC + "/login/device-based/regular/login/", wait_until="domcontentloaded", timeout=60000)
+                time.sleep(3)
                 try:
-                    html_snippet = page.content()[:500]
-                    log("HTML preview: " + html_snippet)
-                except Exception:
-                    pass
-                context.close()
-                browser.close()
-                return None
+                    page.wait_for_selector('input[name="email"]', timeout=15000)
+                except PWTimeout:
+                    log("mbasic also failed. URL: " + page.url)
+                    context.close()
+                    browser.close()
+                    return None
 
             page.fill('input[name="email"]', email_addr)
             page.fill('input[name="pass"]', password)
             login_ts = int(time.time())
             log("Submitting credentials...")
             _click_any_submit(page)
-            time.sleep(6)
+            time.sleep(8)
             log("After submit URL: " + page.url)
 
             # Check 2FA
@@ -263,7 +317,6 @@ def login_account(email_addr, password, account_num):
                 time.sleep(5)
                 log("After 2FA URL: " + page.url)
 
-                # Post-2FA prompts (Save browser, Continue, etc.)
                 for i in range(5):
                     try:
                         clicked = _click_any_submit(page)
@@ -274,7 +327,6 @@ def login_account(email_addr, password, account_num):
                         break
 
             time.sleep(3)
-            # Navigate to www to get www cookies
             try:
                 page.goto(FB_WWW + "/", wait_until="domcontentloaded", timeout=60000)
             except Exception:

@@ -4,15 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       force_all:
-        description: "Force posting even if state says already posted"
+        description: "Force posting even if already posted"
         required: false
-        default: "false"
+        default: "true"
         type: choice
         options:
-          - "false"
           - "true"
-  schedule:
-    - cron: "0 */6 * * *"
+          - "false"
 
 jobs:
   post:
@@ -43,27 +41,23 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
 
-          # مهم: هادو بجوج باش نغطي أي اسم كيقلب عليه السكريبت
           FB_COOKIES: ${{ secrets.FB_COOKIES_1 }}
           FB_COOKIES_1: ${{ secrets.FB_COOKIES_1 }}
 
           CONTENT: ${{ secrets.CONTENT }}
-          IMAGES: ${{ secrets.IMAGES }}
           COMMENTS: ${{ secrets.COMMENTS }}
+          IMAGES: ${{ secrets.IMAGES }}
 
           ACC_NUM: ${{ matrix.acc_num }}
-          FORCE_ALL: ${{ github.event.inputs.force_all || 'false' }}
+          FORCE_ALL: ${{ github.event.inputs.force_all || 'true' }}
 
           PROXY: ${{ secrets.PROXY }}
           PROXY_URL: ${{ secrets.PROXY_URL }}
-
         run: |
           python poster.py
 
       - name: Commit state
         if: always()
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"

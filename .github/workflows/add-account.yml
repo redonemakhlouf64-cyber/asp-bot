@@ -4,18 +4,18 @@ on:
   workflow_dispatch:
     inputs:
       account_number:
-        description: 'Specific account number (empty = process all new)'
+        description: 'Account # (empty = all)'
         required: false
-        type: string
+        default: ''
       manual_code:
-        description: 'Manual 2FA code (optional, leave empty for auto Gmail)'
+        description: '2FA code (empty = fetch from Gmail)'
         required: false
-        type: string
+        default: ''
       force_all:
-        description: 'Re-login ALL accounts (even existing)'
+        description: 'Overwrite existing FB_COOKIES_N'
         required: false
+        default: 'false'
         type: boolean
-        default: false
 
 jobs:
   add:
@@ -44,7 +44,8 @@ jobs:
           FB_ACCOUNTS: ${{ secrets.FB_ACCOUNTS }}
           GMAIL_EMAIL: ${{ secrets.GMAIL_EMAIL }}
           GMAIL_APP_PW: ${{ secrets.GMAIL_APP_PW }}
-          ACCOUNT_NUM: ${{ github.event.inputs.account_number }}
-          MANUAL_CODE: ${{ github.event.inputs.manual_code }}
-          FORCE_ALL: ${{ github.event.inputs.force_all }}
+          ACCOUNT_NUM: ${{ inputs.account_number }}
+          MANUAL_CODE: ${{ inputs.manual_code }}
+          FORCE_ALL: ${{ inputs.force_all }}
+          PROXY_URL: ${{ secrets.PROXY_URL }}
         run: python add_account.py

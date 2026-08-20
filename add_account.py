@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-add_account.py - v6.2
-Auto-login FB accounts and save cookies as GitHub secrets.
+add_account.py - v6.3
+Auto-login FB accounts via mbasic and save cookies as GitHub secrets.
 """
 import os
 import sys
@@ -17,7 +17,8 @@ from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 from nacl import encoding, public
 
 API_BASE = "https://api.github.com/repos/"
-FB_BASE = "https://www.facebook.com"
+FB_MBASIC = "https://mbasic.facebook.com"
+FB_WWW = "https://www.facebook.com"
 
 REPO = os.environ.get("GITHUB_REPOSITORY", "")
 GH_PAT = os.environ.get("GH_PAT", "")
@@ -28,18 +29,20 @@ ACCOUNT_NUM = os.environ.get("ACCOUNT_NUM", "").strip()
 MANUAL_CODE = os.environ.get("MANUAL_CODE", "").strip()
 FORCE_ALL = os.environ.get("FORCE_ALL", "false").lower() == "true"
 
+MOBILE_UA = (
+    "Mozilla/5.0 (Linux; Android 12; SM-G991B) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/120.0.0.0 Mobile Safari/537.36"
+)
+
 
 def log(msg):
     print("[add_account] " + str(msg), flush=True)
 
 
-def gh_request(method, path, data=None):
-    url = API_BASE + REPO + path
-    headers = {
-        "Authorization": "token " + GH_PAT,
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
+def _http_request(method, url, headers=None, data=None, silent=False):
+    if headers is None:
+        headers = {}
     body = None
     if data is not None:
         body = json.dumps(data).encode("utf-8")
@@ -52,9 +55,23 @@ def gh_request(method, path, data=None):
                 return None
             return json.loads(raw)
     except HTTPError as e:
-        raw = e.read().decode("utf-8", errors="ignore")
-        log("GitHub API error " + str(e.code) + ": " + raw)
+        if not silent:
+            try:
+                raw = e.read().decode("utf-8", errors="ignore")
+                log("HTTP error " + str(e.code) + ": " + raw)
+            except Exception:
+                pass
         raise
+
+
+def gh_request(method, path, data=None, silent=False):
+    url = API_BASE + REPO + path
+    headers = {
+        "Authorization": "token " + GH_PAT,
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    return _http_request(method, url, headers=headers, data=data, silent=silent)
 
 
 def get_repo_public_key():
@@ -78,7 +95,7 @@ def upsert_secret(name, value):
 
 def secret_exists(name):
     try:
-        gh_request("GET", "/actions/secrets/" + name)
+        gh_request("GET", "/actions/secrets/" + name, silent=True)
         return True
     except HTTPError as e:
         if e.code == 404:
@@ -163,29 +180,77 @@ def parse_accounts(s):
     return accounts
 
 
+def _click_any_submit(page):
+    for sel in [
+        'input[type="submit"][name="login"]',
+        'button[name="login"]',
+        'input[type="submit"]',
+        'button[type="submit"]',
+    ]:
+        try:
+            el = page.query_selector(sel)
+            if el:
+                el.click()
+                return True
+        except Exception:
+            continue
+    return False
+
+
 def login_account(email_addr, password, account_num):
     log("Login attempt acc #" + str(account_num) + ": " + email_addr[:3] + "***")
     with sync_playwright() as pw:
         browser = pw.chromium.launch(
             headless=True,
-            args=["--no-sandbox", "--disable-blink-features=AutomationControlled"],
+            args=[
+                "--no-sandbox",
+                "--disable-blink-features=AutomationControlled",
+                "--disable-dev-shm-usage",
+            ],
         )
         context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            viewport={"width": 1280, "height": 800},
+            user_agent=MOBILE_UA,
+            viewport={"width": 412, "height": 915},
             locale="en-US",
+            java_script_enabled=True,
         )
         page = context.new_page()
         try:
-            page.goto(FB_BASE + "/login/", wait_until="domcontentloaded", timeout=60000)
-            page.wait_for_selector('input[name="email"]', timeout=30000)
+            log("Opening mbasic login...")
+            page.goto(FB_MBASIC + "/login.php", wait_until="domcontentloaded", timeout=60000)
+            time.sleep(2)
+            log("After goto URL: " + page.url)
+
+            try:
+                page.wait_for_selector('input[name="email"]', timeout=20000)
+            except PWTimeout:
+                log("Email input not found. URL: " + page.url)
+                try:
+                    html_snippet = page.content()[:500]
+                    log("HTML preview: " + html_snippet)
+                except Exception:
+                    pass
+                context.close()
+                browser.close()
+                return None
+
             page.fill('input[name="email"]', email_addr)
             page.fill('input[name="pass"]', password)
             login_ts = int(time.time())
-            page.click('button[name="login"]')
-            time.sleep(5)
+            log("Submitting credentials...")
+            _click_any_submit(page)
+            time.sleep(6)
+            log("After submit URL: " + page.url)
+
+            # Check 2FA
+            has_2fa = False
             try:
-                page.wait_for_selector('input[name="approvals_code"]', timeout=15000)
+                page.wait_for_selector('input[name="approvals_code"]', timeout=12000)
+                has_2fa = True
+            except PWTimeout:
+                pass
+
+            if has_2fa:
                 log("2FA required.")
                 code = MANUAL_CODE if MANUAL_CODE else fetch_2fa_code(login_ts, timeout=180)
                 if not code:
@@ -194,35 +259,37 @@ def login_account(email_addr, password, account_num):
                     browser.close()
                     return None
                 page.fill('input[name="approvals_code"]', code)
-                try:
-                    page.click('button[type="submit"]', timeout=10000)
-                except PWTimeout:
-                    page.keyboard.press("Enter")
+                _click_any_submit(page)
                 time.sleep(5)
-                for _ in range(4):
+                log("After 2FA URL: " + page.url)
+
+                # Post-2FA prompts (Save browser, Continue, etc.)
+                for i in range(5):
                     try:
-                        btn = page.query_selector('button[type="submit"]')
-                        if btn:
-                            btn.click()
-                            time.sleep(3)
-                        else:
+                        clicked = _click_any_submit(page)
+                        if not clicked:
                             break
+                        time.sleep(3)
                     except Exception:
                         break
-            except PWTimeout:
-                log("No 2FA prompt.")
-            time.sleep(5)
+
+            time.sleep(3)
+            # Navigate to www to get www cookies
             try:
-                page.goto(FB_BASE + "/", wait_until="domcontentloaded", timeout=60000)
+                page.goto(FB_WWW + "/", wait_until="domcontentloaded", timeout=60000)
             except Exception:
                 pass
             time.sleep(3)
+
             current_url = page.url
+            log("Final URL: " + current_url)
+
             if "login" in current_url or "checkpoint" in current_url:
-                log("Login failed: " + current_url)
+                log("Login failed on: " + current_url)
                 context.close()
                 browser.close()
                 return None
+
             cookies = context.cookies()
             has_c_user = any(c.get("name") == "c_user" for c in cookies)
             if not has_c_user:
@@ -230,6 +297,7 @@ def login_account(email_addr, password, account_num):
                 context.close()
                 browser.close()
                 return None
+
             log("Login OK acc #" + str(account_num))
             cookies_json = json.dumps(cookies)
             context.close()
@@ -237,6 +305,10 @@ def login_account(email_addr, password, account_num):
             return cookies_json
         except Exception as e:
             log("Playwright error: " + str(e))
+            try:
+                log("URL at error: " + page.url)
+            except Exception:
+                pass
             try:
                 context.close()
                 browser.close()

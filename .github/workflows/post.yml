@@ -15,11 +15,12 @@ on:
 jobs:
   post:
     runs-on: ubuntu-latest
+    continue-on-error: true
 
     strategy:
       fail-fast: false
       matrix:
-        acc_num: [1]
+        acc_num: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 
     steps:
       - name: Checkout
@@ -45,6 +46,25 @@ jobs:
 
           FB_COOKIES: ${{ secrets.FB_COOKIES_1 }}
           FB_COOKIES_1: ${{ secrets.FB_COOKIES_1 }}
+          FB_COOKIES_2: ${{ secrets.FB_COOKIES_2 }}
+          FB_COOKIES_3: ${{ secrets.FB_COOKIES_3 }}
+          FB_COOKIES_4: ${{ secrets.FB_COOKIES_4 }}
+          FB_COOKIES_5: ${{ secrets.FB_COOKIES_5 }}
+          FB_COOKIES_6: ${{ secrets.FB_COOKIES_6 }}
+          FB_COOKIES_7: ${{ secrets.FB_COOKIES_7 }}
+          FB_COOKIES_8: ${{ secrets.FB_COOKIES_8 }}
+          FB_COOKIES_9: ${{ secrets.FB_COOKIES_9 }}
+          FB_COOKIES_10: ${{ secrets.FB_COOKIES_10 }}
+          FB_COOKIES_11: ${{ secrets.FB_COOKIES_11 }}
+          FB_COOKIES_12: ${{ secrets.FB_COOKIES_12 }}
+          FB_COOKIES_13: ${{ secrets.FB_COOKIES_13 }}
+          FB_COOKIES_14: ${{ secrets.FB_COOKIES_14 }}
+          FB_COOKIES_15: ${{ secrets.FB_COOKIES_15 }}
+          FB_COOKIES_16: ${{ secrets.FB_COOKIES_16 }}
+          FB_COOKIES_17: ${{ secrets.FB_COOKIES_17 }}
+          FB_COOKIES_18: ${{ secrets.FB_COOKIES_18 }}
+          FB_COOKIES_19: ${{ secrets.FB_COOKIES_19 }}
+          FB_COOKIES_20: ${{ secrets.FB_COOKIES_20 }}
 
           CONTENT: ${{ secrets.CONTENT }}
           COMMENTS: ${{ secrets.COMMENTS }}
@@ -65,8 +85,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: failure-screenshot
-          path: failure_acc1.png
+          name: failure-screenshot-acc-${{ matrix.acc_num }}
+          path: failure_acc${{ matrix.acc_num }}.png
           if-no-files-found: ignore
 
       - name: Commit state
@@ -81,5 +101,5 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "Update poster state"
-            git push
+            git push || true
           fi

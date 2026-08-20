@@ -4,22 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       force_all:
-        description: "Force posting even if already posted"
-        required: false
+        description: "Force posting even if recently posted"
         default: "true"
         type: choice
-        options:
-          - "true"
-          - "false"
+        options: ["true", "false"]
+  schedule:
+    - cron: "0 */6 * * *"
 
 jobs:
   post:
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        acc_num: [1]
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -29,6 +24,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
 
       - name: Install deps
         run: |
@@ -36,38 +32,30 @@ jobs:
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           fi
-          python -m playwright install --with-deps chromium
+          python -m playwright install chromium
 
       - name: Run poster
         env:
-          GH_PAT: ${{ secrets.GH_PAT }}
-
-          FB_COOKIES: ${{ secrets.FB_COOKIES_1 }}
+          FB_ACCOUNTS:  ${{ secrets.FB_ACCOUNTS }}
           FB_COOKIES_1: ${{ secrets.FB_COOKIES_1 }}
-
-          CONTENT: ${{ secrets.CONTENT }}
-          COMMENTS: ${{ secrets.COMMENTS }}
-          IMAGES: ${{ secrets.IMAGES }}
-
-          ACC_NUM: ${{ matrix.acc_num }}
-          FORCE_ALL: ${{ github.event.inputs.force_all || 'true' }}
-
-          PROXY: ${{ secrets.PROXY }}
-          PROXY_URL: ${{ secrets.PROXY_URL }}
+          CONTENT:      ${{ secrets.CONTENT }}
+          COMMENTS:     ${{ secrets.COMMENTS }}
+          GH_PAT:       ${{ secrets.GH_PAT }}
+          GMAIL_EMAIL:  ${{ secrets.GMAIL_EMAIL }}
+          GMAIL_APP_PW: ${{ secrets.GMAIL_APP_PW }}
+          PROXY:        ${{ secrets.PROXY }}
+          PROXY_URL:    ${{ secrets.PROXY_URL }}
+          FORCE_ALL:    ${{ github.event.inputs.force_all || 'true' }}
         run: |
           python poster.py
 
-      - name: Commit state
+      - name: Upload logs
         if: always()
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-
-          git add -A
-
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "Update poster state"
-            git push
-          fi
+        uses: actions/upload-artifact@v4
+        with:
+          name: poster-logs
+          path: |
+            *.log
+            screenshots/
+          retention-days: 7
+          if-no-files-found: ignore

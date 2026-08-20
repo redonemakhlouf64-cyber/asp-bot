@@ -1,0 +1,50 @@
+name: Add Account (Auto)
+
+on:
+  workflow_dispatch:
+    inputs:
+      account_number:
+        description: 'Specific account number (empty = process all new)'
+        required: false
+        type: string
+      manual_code:
+        description: 'Manual 2FA code (optional, leave empty for auto Gmail)'
+        required: false
+        type: string
+      force_all:
+        description: 'Re-login ALL accounts (even existing)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  add:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          pip install -r requirements.txt
+          pip install pynacl
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Run login
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          FB_ACCOUNTS: ${{ secrets.FB_ACCOUNTS }}
+          GMAIL_EMAIL: ${{ secrets.GMAIL_EMAIL }}
+          GMAIL_APP_PW: ${{ secrets.GMAIL_APP_PW }}
+          ACCOUNT_NUM: ${{ github.event.inputs.account_number }}
+          MANUAL_CODE: ${{ github.event.inputs.manual_code }}
+          FORCE_ALL: ${{ github.event.inputs.force_all }}
+        run: python add_account.py

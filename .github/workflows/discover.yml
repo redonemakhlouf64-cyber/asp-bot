@@ -7,7 +7,7 @@ on:
 
 jobs:
   discover:
-        runs-on: ubuntu-22.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
       - name: Checkout
@@ -35,6 +35,7 @@ jobs:
         run: |
           git config user.name "asp-bot"
           git config user.email "bot@asp.local"
-          git add groups.txt || true
-          git diff --cached --quiet || git commit -m "discovery update"
+          git pull --rebase origin main || true
+          git add groups.txt state/ || true
+          git diff --staged --quiet || git commit -m "Update discovered groups"
           git push || true

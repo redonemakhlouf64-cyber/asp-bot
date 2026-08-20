@@ -19,7 +19,7 @@ on:
 
 jobs:
   add:
-        runs-on: ubuntu-22.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 120
     steps:
       - name: Checkout

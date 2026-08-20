@@ -13,6 +13,8 @@ ACCOUNT_NUM = os.environ.get("ACCOUNT_NUM", "").strip()
 MANUAL_CODE = os.environ.get("MANUAL_CODE", "").strip()
 FORCE_ALL = os.environ.get("FORCE_ALL", "false").strip().lower() == "true"
 
+API_BASE = "https://api.github.com/repos/"
+
 def log(m):
     print(f"[add-account] {m}", flush=True)
 
@@ -36,9 +38,9 @@ def get_existing_cookies():
     if not GH_PAT or not REPO:
         return set()
     try:
-        url = f"https://api.github.com/repos/{REPO}/actions/secrets?per_page=100"
+        url = API_BASE + REPO + "/actions/secrets?per_page=100"
         req = urllib.request.Request(url, headers={
-            "Authorization": f"Bearer {GH_PAT}",
+            "Authorization": "Bearer " + GH_PAT,
             "Accept": "application/vnd.github+json"
         })
         with urllib.request.urlopen(req, timeout=30) as r:
@@ -54,9 +56,9 @@ def get_existing_cookies():
         return set()
 
 def get_public_key():
-    url = f"https://api.github.com/repos/{REPO}/actions/secrets/public-key"
+    url = API_BASE + REPO + "/actions/secrets/public-key"
     req = urllib.request.Request(url, headers={
-        "Authorization": f"Bearer {GH_PAT}",
+        "Authorization": "Bearer " + GH_PAT,
         "Accept": "application/vnd.github+json"
     })
     with urllib.request.urlopen(req, timeout=30) as r:
@@ -71,13 +73,13 @@ def encrypt_secret(public_key_b64, secret_value):
 def save_secret(name, value):
     pk_data = get_public_key()
     encrypted = encrypt_secret(pk_data["key"], value)
-    url = f"https://api.github.com/repos/{REPO}/actions/secrets/{name}"
+    url = API_BASE + REPO + "/actions/secrets/" + name
     body = json.dumps({
         "encrypted_value": encrypted,
         "key_id": pk_data["key_id"]
     }).encode("utf-8")
     req = urllib.request.Request(url, data=body, method="PUT", headers={
-        "Authorization": f"Bearer {GH_PAT}",
+        "Authorization": "Bearer " + GH_PAT,
         "Accept": "application/vnd.github+json",
         "Content-Type": "application/json"
     })
@@ -145,47 +147,4 @@ def login_and_save(email_addr, password, num):
                 for _ in range(3):
                     try:
                         page.locator('button:has-text("Continue")').first.click(timeout=5000)
-                        page.wait_for_timeout(4000)
-                    except:
-                        break
-            page.wait_for_timeout(4000)
-            if "login" in page.url or "checkpoint" in page.url:
-                log(f"login failed - URL: {page.url}")
-                return False
-            cookies = ctx.cookies()
-            cookies_json = json.dumps(cookies)
-            ok = save_secret(f"FB_COOKIES_{num}", cookies_json)
-            if ok:
-                log(f"acc{num} saved to FB_COOKIES_{num}")
-                return True
-            return False
-        finally:
-            br.close()
-
-def main():
-    if not FB_ACCOUNTS or not GH_PAT or not REPO:
-        log("missing FB_ACCOUNTS, GH_PAT, or REPO")
-        sys.exit(1)
-    accounts = parse_accounts()
-    log(f"parsed {len(accounts)} accounts")
-    if ACCOUNT_NUM:
-        targets = [a for a in accounts if a["num"] == int(ACCOUNT_NUM)]
-    elif FORCE_ALL:
-        targets = accounts
-    else:
-        existing = get_existing_cookies()
-        log(f"existing FB_COOKIES: {sorted(existing)}")
-        targets = [a for a in accounts if a["num"] not in existing]
-    log(f"will process {len(targets)} accounts")
-    success = 0
-    for a in targets:
-        try:
-            if login_and_save(a["email"], a["password"], a["num"]):
-                success += 1
-            time.sleep(30 + (a["num"] * 3))
-        except Exception as e:
-            log(f"acc{a['num']} error: {str(e)[:80]}")
-    log(f"DONE - {success}/{len(targets)} success")
-
-if __name__ == "__main__":
-    main()
+                        page.wait_for

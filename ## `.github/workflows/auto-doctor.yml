@@ -1,0 +1,121 @@
+name: Auto Doctor
+
+on:
+  # يشتغل تلقائياً عند فشل أي workflow
+  workflow_run:
+    workflows:
+      - Auto Poster
+      - Auto Joiner
+      - Auto Discover
+    types: [completed]
+  workflow_dispatch:  # يدوي أيضًا
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  diagnose:
+    if: github.event.workflow_run.conclusion == 'failure' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-22.04
+    outputs:
+      can_retry: ${{ steps.doctor.outputs.can_retry }}
+      fixed_count: ${{ steps.doctor.outputs.fixed_count }}
+      workflow_name: ${{ steps.info.outputs.workflow_name }}
+      workflow_id: ${{ steps.info.outputs.workflow_id }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get failed workflow info
+        id: info
+        run: |
+          WF_NAME="${{ github.event.workflow_run.name }}"
+          WF_ID="${{ github.event.workflow_run.id }}"
+          # استنتاج اسم ملف الـ workflow من الاسم
+          case "$WF_NAME" in
+            "Auto Poster") FILE="post" ;;
+            "Auto Joiner") FILE="join" ;;
+            "Auto Discover") FILE="discover" ;;
+            *) FILE="unknown" ;;
+          esac
+          echo "workflow_name=$FILE" >> $GITHUB_OUTPUT
+          echo "workflow_id=$WF_ID" >> $GITHUB_OUTPUT
+          echo "🔍 Failed workflow: $WF_NAME ($FILE) run #$WF_ID"
+
+      - name: Download failed logs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID="${{ github.event.workflow_run.id }}"
+          if [ -z "$RUN_ID" ]; then
+            # تشغيل يدوي: خذ آخر workflow فاشل
+            RUN_ID=$(gh run list --limit 5 --json databaseId,conclusion \
+              -q '.[] | select(.conclusion=="failure") | .databaseId' | head -1)
+          fi
+          echo "Downloading logs for run $RUN_ID"
+          gh run view "$RUN_ID" --log-failed > failed_workflow.log 2>&1 || true
+          echo "📄 Log size: $(wc -l < failed_workflow.log) lines"
+          head -20 failed_workflow.log
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run Auto-Doctor
+        id: doctor
+        env:
+          LOG_FILE: failed_workflow.log
+          WORKFLOW_NAME: ${{ steps.info.outputs.workflow_name }}
+        run: python auto_doctor.py
+
+      - name: Commit fixes (if any)
+        run: |
+          git config user.name "auto-doctor[bot]"
+          git config user.email "auto-doctor[bot]@users.noreply.github.com"
+          git add -A 2>/dev/null || true
+          if git diff --cached --quiet 2>/dev/null; then
+            echo "ℹ️ No fixes to commit"
+          else
+            git commit -m "🩺 Auto-Doctor: fixed ${{ steps.doctor.outputs.fixed_count }} issue(s) in ${{ steps.info.outputs.workflow_name }}"
+            git push
+            echo "✅ Fixes committed"
+          fi
+
+      - name: Create issue if unfixable
+        if: steps.doctor.outputs.can_retry == 'false' && steps.doctor.outputs.detected_count != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "🚨 Auto-Doctor: manual fix needed for ${{ steps.info.outputs.workflow_name }}" \
+            --body "$(cat doctor_result.json)" \
+            --label "auto-doctor" || true
+
+      - name: Upload diagnosis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: doctor-diagnosis-${{ github.run_id }}
+          path: |
+            doctor_result.json
+            failed_workflow.log
+
+  retry:
+    needs: diagnose
+    if: needs.diagnose.outputs.can_retry == 'true' && needs.diagnose.outputs.fixed_count != '0'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Wait 30s for commit to propagate
+        run: sleep 30
+
+      - name: Retry failed workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          WF="${{ needs.diagnose.outputs.workflow_name }}"
+          echo "🔄 Retrying $WF.yml..."
+          gh workflow run "$WF.yml" || echo "⚠️ Retry trigger failed"

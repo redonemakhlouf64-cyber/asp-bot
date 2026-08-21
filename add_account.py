@@ -1,424 +1,170 @@
 #!/usr/bin/env python3
 """
-add_account.py - v6.4
-Auto-login FB via residential proxy and save cookies as GitHub secrets.
+add_account.py v7.0 - Cookies-Only Verifier
+No email, no password, no 2FA, no proxy.
+Verifies FB_COOKIES_N secrets are valid and working.
 """
+
 import os
-import sys
 import json
 import time
-import re
-import imaplib
-import email as email_lib
-from base64 import b64encode
-from urllib import request as urlreq
-from urllib.parse import urlparse
-from urllib.error import HTTPError
-from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
-from nacl import encoding, public
-
-API_BASE = "https://api.github.com/repos/"
-FB_WWW = "https://www.facebook.com"
-FB_MBASIC = "https://mbasic.facebook.com"
-
-REPO = os.environ.get("GITHUB_REPOSITORY", "")
-GH_PAT = os.environ.get("GH_PAT", "")
-FB_ACCOUNTS_STR = os.environ.get("FB_ACCOUNTS", "")
-GMAIL_EMAIL = os.environ.get("GMAIL_EMAIL", "")
-GMAIL_APP_PW = os.environ.get("GMAIL_APP_PW", "")
-ACCOUNT_NUM = os.environ.get("ACCOUNT_NUM", "").strip()
-MANUAL_CODE = os.environ.get("MANUAL_CODE", "").strip()
-FORCE_ALL = os.environ.get("FORCE_ALL", "false").lower() == "true"
-PROXY_URL = os.environ.get("PROXY_URL", "").strip()
-
-DESKTOP_UA = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/120.0.0.0 Safari/537.36"
-)
+import sys
+from playwright.sync_api import sync_playwright
 
 
 def log(msg):
-    print("[add_account] " + str(msg), flush=True)
+    print(f"[add_account] {msg}", flush=True)
 
 
-def parse_proxy():
-    if not PROXY_URL:
+def _normalize_cookies(cookies):
+    """Convert browser cookies (Firefox/Chrome) to Playwright format."""
+    ss_map = {"lax": "Lax", "strict": "Strict",
+              "none": "None", "no_restriction": "None"}
+    allowed = {"name", "value", "domain", "path", "expires",
+               "httpOnly", "secure", "sameSite"}
+    out = []
+    for c in cookies:
+        nc = {}
+        for k, v in c.items():
+            if k == "expirationDate":
+                nc["expires"] = float(v) if v is not None else -1
+            elif k == "sameSite":
+                nc["sameSite"] = ss_map.get(str(v).lower(), "Lax") if v else "Lax"
+            elif k in allowed:
+                nc[k] = v
+        nc.setdefault("sameSite", "Lax")
+        nc.setdefault("path", "/")
+        if "domain" not in nc:
+            continue
+        out.append(nc)
+    return out
+
+
+DESKTOP_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+              "AppleWebKit/537.36 (KHTML, like Gecko) "
+              "Chrome/120.0.0.0 Safari/537.36")
+
+STEALTH_JS = """
+Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+Object.defineProperty(navigator, 'plugins', {get: () => [1,2,3,4,5]});
+Object.defineProperty(navigator, 'languages', {get: () => ['en-US','en']});
+window.chrome = {runtime: {}};
+"""
+
+
+def verify_account(acc_num):
+    """Verify cookies for a single account. Returns True/False/None."""
+    log(f"--- Verifying account #{acc_num} ---")
+    fb_cookies = os.environ.get(f"FB_COOKIES_{acc_num}", "").strip()
+    if not fb_cookies:
+        log(f"⏭️  FB_COOKIES_{acc_num} not set. Skipping.")
         return None
+
     try:
-        p = urlparse(PROXY_URL)
-        if not p.hostname or not p.port:
-            return None
-        cfg = {"server": (p.scheme or "http") + "://" + p.hostname + ":" + str(p.port)}
-        if p.username:
-            cfg["username"] = p.username
-        if p.password:
-            cfg["password"] = p.password
-        return cfg
+        cookies_raw = json.loads(fb_cookies)
     except Exception as e:
-        log("Proxy parse error: " + str(e))
-        return None
+        log(f"❌ FB_COOKIES_{acc_num} invalid JSON: {e}")
+        return False
 
+    has_c_user = any(c.get("name") == "c_user" for c in cookies_raw)
+    has_xs = any(c.get("name") == "xs" for c in cookies_raw)
+    log(f"🔍 c_user present: {has_c_user} | xs present: {has_xs}")
+    if not has_c_user or not has_xs:
+        log("❌ Missing essential cookies (c_user or xs)")
+        return False
 
-def _http_request(method, url, headers=None, data=None, silent=False):
-    if headers is None:
-        headers = {}
-    body = None
-    if data is not None:
-        body = json.dumps(data).encode("utf-8")
-        headers["Content-Type"] = "application/json"
-    req = urlreq.Request(url, data=body, headers=headers, method=method)
-    try:
-        with urlreq.urlopen(req, timeout=30) as resp:
-            raw = resp.read()
-            if not raw:
-                return None
-            return json.loads(raw)
-    except HTTPError as e:
-        if not silent:
-            try:
-                raw = e.read().decode("utf-8", errors="ignore")
-                log("HTTP error " + str(e.code) + ": " + raw)
-            except Exception:
-                pass
-        raise
+    cookies = _normalize_cookies(cookies_raw)
+    log(f"🍪 Loaded {len(cookies)} cookies")
 
-
-def gh_request(method, path, data=None, silent=False):
-    url = API_BASE + REPO + path
-    headers = {
-        "Authorization": "token " + GH_PAT,
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
-    return _http_request(method, url, headers=headers, data=data, silent=silent)
-
-
-def get_repo_public_key():
-    return gh_request("GET", "/actions/secrets/public-key")
-
-
-def encrypt_secret(public_key_b64, secret_value):
-    pub = public.PublicKey(public_key_b64.encode("utf-8"), encoding.Base64Encoder())
-    sealed = public.SealedBox(pub)
-    encrypted = sealed.encrypt(secret_value.encode("utf-8"))
-    return b64encode(encrypted).decode("utf-8")
-
-
-def upsert_secret(name, value):
-    pk = get_repo_public_key()
-    encrypted = encrypt_secret(pk["key"], value)
-    data = {"encrypted_value": encrypted, "key_id": pk["key_id"]}
-    gh_request("PUT", "/actions/secrets/" + name, data=data)
-    log("Secret " + name + " saved.")
-
-
-def secret_exists(name):
-    try:
-        gh_request("GET", "/actions/secrets/" + name, silent=True)
-        return True
-    except HTTPError as e:
-        if e.code == 404:
-            return False
-        raise
-
-
-def fetch_2fa_code(after_ts, timeout=180):
-    if not GMAIL_EMAIL or not GMAIL_APP_PW:
-        log("Gmail credentials missing.")
-        return None
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        try:
-            M = imaplib.IMAP4_SSL("imap.gmail.com")
-            M.login(GMAIL_EMAIL, GMAIL_APP_PW)
-            M.select("INBOX")
-            typ, data = M.search(None, '(FROM "facebookmail.com")')
-            if typ == "OK":
-                ids = data[0].split()
-                for msg_id in reversed(ids[-10:]):
-                    typ, msg_data = M.fetch(msg_id, "(RFC822)")
-                    if typ != "OK":
-                        continue
-                    raw = msg_data[0][1]
-                    msg = email_lib.message_from_bytes(raw)
-                    date_hdr = msg.get("Date", "")
-                    try:
-                        parsed = email_lib.utils.parsedate_tz(date_hdr)
-                        date_ts = email_lib.utils.mktime_tz(parsed)
-                    except Exception:
-                        continue
-                    if date_ts < after_ts - 10:
-                        continue
-                    body_text = ""
-                    if msg.is_multipart():
-                        for part in msg.walk():
-                            if part.get_content_type() == "text/plain":
-                                try:
-                                    body_text += part.get_payload(decode=True).decode("utf-8", errors="ignore")
-                                except Exception:
-                                    pass
-                    else:
-                        try:
-                            body_text = msg.get_payload(decode=True).decode("utf-8", errors="ignore")
-                        except Exception:
-                            body_text = ""
-                    subject = msg.get("Subject", "")
-                    combined = subject + " " + body_text
-                    m = re.search(r"\b(\d{5,8})\b", combined)
-                    if m:
-                        code = m.group(1)
-                        log("Got 2FA code: " + code)
-                        try:
-                            M.logout()
-                        except Exception:
-                            pass
-                        return code
-            try:
-                M.logout()
-            except Exception:
-                pass
-        except Exception as e:
-            log("Gmail poll error: " + str(e))
-        time.sleep(15)
-    log("Gmail 2FA timeout.")
-    return None
-
-
-def parse_accounts(s):
-    accounts = []
-    s = s.strip()
-    if not s:
-        return accounts
-    for line in re.split(r"[\n|;]+", s):
-        line = line.strip()
-        if not line:
-            continue
-        parts = re.split(r"[:,\s]+", line, maxsplit=1)
-        if len(parts) == 2:
-            accounts.append((parts[0].strip(), parts[1].strip()))
-    return accounts
-
-
-def _click_any_submit(page):
-    for sel in [
-        'button[name="login"]',
-        'input[type="submit"][name="login"]',
-        'button[type="submit"]',
-        'input[type="submit"]',
-    ]:
-        try:
-            el = page.query_selector(sel)
-            if el:
-                el.click()
-                return True
-        except Exception:
-            continue
-    return False
-
-
-def _dismiss_cookie_banner(page):
-    for sel in [
-        '[data-cookiebanner="accept_only_essential_button"]',
-        'button[data-cookiebanner="accept_button"]',
-        'button[title="Only allow essential cookies"]',
-        'button[title="Allow all cookies"]',
-    ]:
-        try:
-            btn = page.query_selector(sel)
-            if btn:
-                btn.click()
-                log("Dismissed cookie banner")
-                time.sleep(2)
-                return True
-        except Exception:
-            continue
-    return False
-
-
-def login_account(email_addr, password, account_num):
-    log("Login attempt acc #" + str(account_num) + ": " + email_addr[:3] + "***")
-    proxy_cfg = parse_proxy()
-    if proxy_cfg:
-        log("Using proxy: " + proxy_cfg["server"])
-    else:
-        log("WARNING: No proxy configured, FB will likely block.")
-
-    with sync_playwright() as pw:
-        browser = pw.chromium.launch(
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
             headless=True,
-            proxy=proxy_cfg,
             args=[
-                "--no-sandbox",
                 "--disable-blink-features=AutomationControlled",
+                "--no-sandbox",
                 "--disable-dev-shm-usage",
-                "--disable-gpu",
             ],
         )
-        context = browser.new_context(
-            user_agent=DESKTOP_UA,
-            viewport={"width": 1366, "height": 768},
-            locale="en-US",
-            timezone_id="America/New_York",
-        )
-        context.add_init_script(
-            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"
-        )
-        page = context.new_page()
         try:
-            log("Opening FB login via proxy...")
-            page.goto(FB_WWW + "/login.php", wait_until="domcontentloaded", timeout=90000)
-            time.sleep(4)
-            log("After goto URL: " + page.url)
-
-            _dismiss_cookie_banner(page)
+            context = browser.new_context(
+                user_agent=DESKTOP_UA,
+                viewport={"width": 1366, "height": 768},
+                locale="en-US",
+            )
+            context.add_init_script(STEALTH_JS)
+            context.add_cookies(cookies)
+            page = context.new_page()
 
             try:
-                page.wait_for_selector('input[name="email"]', timeout=30000)
-            except PWTimeout:
-                log("Email input not found on www. URL: " + page.url)
-                log("Trying mbasic fallback...")
-                page.goto(FB_MBASIC + "/login/device-based/regular/login/", wait_until="domcontentloaded", timeout=60000)
-                time.sleep(3)
-                try:
-                    page.wait_for_selector('input[name="email"]', timeout=15000)
-                except PWTimeout:
-                    log("mbasic also failed. URL: " + page.url)
-                    context.close()
-                    browser.close()
-                    return None
-
-            page.fill('input[name="email"]', email_addr)
-            page.fill('input[name="pass"]', password)
-            login_ts = int(time.time())
-            log("Submitting credentials...")
-            _click_any_submit(page)
-            time.sleep(8)
-            log("After submit URL: " + page.url)
-
-            # Check 2FA
-            has_2fa = False
-            try:
-                page.wait_for_selector('input[name="approvals_code"]', timeout=12000)
-                has_2fa = True
-            except PWTimeout:
-                pass
-
-            if has_2fa:
-                log("2FA required.")
-                code = MANUAL_CODE if MANUAL_CODE else fetch_2fa_code(login_ts, timeout=180)
-                if not code:
-                    log("No 2FA code available.")
-                    context.close()
-                    browser.close()
-                    return None
-                page.fill('input[name="approvals_code"]', code)
-                _click_any_submit(page)
+                page.goto("https://www.facebook.com/",
+                          wait_until="domcontentloaded", timeout=60000)
                 time.sleep(5)
-                log("After 2FA URL: " + page.url)
+                url = page.url
+                log(f"URL: {url}")
 
-                for i in range(5):
+                if "login" in url.lower() or "checkpoint" in url.lower():
+                    log("❌ Cookies rejected — redirected to login/checkpoint")
                     try:
-                        clicked = _click_any_submit(page)
-                        if not clicked:
-                            break
-                        time.sleep(3)
+                        page.screenshot(
+                            path=f"verify_acc{acc_num}_fail.png",
+                            full_page=True)
+                        log(f"📸 Saved: verify_acc{acc_num}_fail.png")
                     except Exception:
-                        break
+                        pass
+                    return False
 
-            time.sleep(3)
-            try:
-                page.goto(FB_WWW + "/", wait_until="domcontentloaded", timeout=60000)
-            except Exception:
-                pass
-            time.sleep(3)
+                cookies_now = page.context.cookies()
+                c_user_now = next(
+                    (c for c in cookies_now if c.get("name") == "c_user"),
+                    None)
+                if not c_user_now:
+                    log("❌ c_user missing after navigation (session invalid)")
+                    try:
+                        page.screenshot(
+                            path=f"verify_acc{acc_num}_fail.png",
+                            full_page=True)
+                        log(f"📸 Saved: verify_acc{acc_num}_fail.png")
+                    except Exception:
+                        pass
+                    return False
 
-            current_url = page.url
-            log("Final URL: " + current_url)
-
-            if "login" in current_url or "checkpoint" in current_url:
-                log("Login failed on: " + current_url)
-                context.close()
-                browser.close()
-                return None
-
-            cookies = context.cookies()
-            has_c_user = any(c.get("name") == "c_user" for c in cookies)
-            if not has_c_user:
-                log("Missing c_user cookie.")
-                context.close()
-                browser.close()
-                return None
-
-            log("Login OK acc #" + str(account_num))
-            cookies_json = json.dumps(cookies)
-            context.close()
+                log(f"✅ Account #{acc_num} verified! User ID: {c_user_now.get('value')}")
+                return True
+            except Exception as e:
+                log(f"❌ Verification error: {e}")
+                return False
+        finally:
             browser.close()
-            return cookies_json
-        except Exception as e:
-            log("Playwright error: " + str(e))
-            try:
-                log("URL at error: " + page.url)
-            except Exception:
-                pass
-            try:
-                context.close()
-                browser.close()
-            except Exception:
-                pass
-            return None
 
 
 def main():
-    if not REPO or not GH_PAT:
-        log("Missing GITHUB_REPOSITORY or GH_PAT.")
-        sys.exit(1)
-    accounts = parse_accounts(FB_ACCOUNTS_STR)
-    if not accounts:
-        log("No accounts in FB_ACCOUNTS.")
-        sys.exit(1)
-    log("Found " + str(len(accounts)) + " account(s).")
-    if ACCOUNT_NUM:
-        try:
-            idx = int(ACCOUNT_NUM) - 1
-            if idx < 0 or idx >= len(accounts):
-                log("ACCOUNT_NUM out of range.")
-                sys.exit(1)
-            accounts_to_process = [(idx, accounts[idx])]
-        except ValueError:
-            log("Invalid ACCOUNT_NUM.")
-            sys.exit(1)
-    else:
-        accounts_to_process = list(enumerate(accounts))
-    processed = 0
-    failed = 0
-    skipped = 0
-    for idx, (email_addr, password) in accounts_to_process:
-        acc_num = idx + 1
-        secret_name = "FB_COOKIES_" + str(acc_num)
-        if not FORCE_ALL:
-            try:
-                if secret_exists(secret_name):
-                    log("Acc #" + str(acc_num) + " already has cookies, skipping.")
-                    skipped += 1
-                    continue
-            except Exception as e:
-                log("Check error: " + str(e))
-        cookies_json = login_account(email_addr, password, acc_num)
-        if not cookies_json:
-            log("Acc #" + str(acc_num) + " failed.")
-            failed += 1
-            continue
-        try:
-            upsert_secret(secret_name, cookies_json)
-            processed += 1
-        except Exception as e:
-            log("Save failed acc #" + str(acc_num) + ": " + str(e))
-            failed += 1
-    log("Done. OK:" + str(processed) + " Skip:" + str(skipped) + " Fail:" + str(failed))
-    if failed > 0 and processed == 0:
-        sys.exit(1)
+    log("=" * 50)
+    log("add_account.py v7.0 (cookies-only verifier)")
+    log("=" * 50)
+
+    ok = []
+    bad = []
+    skip = []
+
+    for i in range(1, 11):  # check up to 10 accounts
+        result = verify_account(i)
+        if result is True:
+            ok.append(i)
+        elif result is False:
+            bad.append(i)
+        else:
+            skip.append(i)
+
+    log("=" * 50)
+    log(f"Summary: ✅ OK={len(ok)} | ❌ Bad={len(bad)} | ⏭️  Skipped={len(skip)}")
+    if ok:
+        log(f"  ✅ Valid accounts: {ok}")
+    if bad:
+        log(f"  ❌ Invalid accounts: {bad}")
+    log("=" * 50)
+
+    return 1 if bad else 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

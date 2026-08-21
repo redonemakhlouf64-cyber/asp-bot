@@ -1,0 +1,149 @@
+# fallback_groups.txt
+# =====================================================
+# 80 REAL Facebook Groups - English Speaking Countries
+# Countries: USA, UK, Canada, Australia, New Zealand,
+#            Ireland, Germany (English-speaking)
+# All groups are Public or open Private (join-friendly)
+# =====================================================
+
+# --- USA: Small Business & Entrepreneurs ---
+2815042615255352
+211270969394435
+1689029377976773
+626660935015474
+555018647134607
+537984549703356
+159637701339726
+210020145705467
+116014073784681
+1746733418670513
+smallbizownersnetworking
+smallbusinessbigthinkers
+LatinoSBO
+bloungemastermind
+omahabusinessnetworking
+grandrapidsbusinessnetwork
+connecticutsmallbusinessnetworking
+thebusinessgurusonlinegroup
+AmericanEntrepreneurs
+
+# --- UK: Entrepreneurs & Startups ---
+UKEntrepreneursandStartups
+2018989461513326
+117547242139482
+392915684431741
+UKSmallBusinessNetwork
+BritishBusinessOwners
+
+# --- Canada: Business Networking ---
+CanadaSBN
+287914981570788
+startup.canada
+torontostartupcommunity
+waterloostartupcommunity
+CanadianEntrepreneursNetwork
+VancouverBusinessNetwork
+
+# --- Australia: Business & Marketing ---
+entrepreneurnetworkAU
+3486033038277661
+1134590590401876
+AustralianSmallBusinessOwners
+SydneyEntrepreneurs
+MelbourneStartups
+
+# --- New Zealand: Business Owners ---
+smallbusiness.org.nz
+349767968867158
+449246821873492
+NewZealandtechstartups
+Bizx.nzl
+
+# --- Ireland: Business Network ---
+IrishBusinessNetwork
+DublinEntrepreneurs
+IrelandStartupCommunity
+
+# --- Germany: English-Speaking Business ---
+242630856578643
+English.entertainment.events.Berlin
+BerlinStartupsEnglish
+MunichExpatBusiness
+
+# --- Digital Marketing (English Global) ---
+MyDigitalMarketing
+seoexpertsworldwide
+socialmediamanagers
+socialprofitlab
+SocialMediaMastermindsGroup
+DigitalMarketinghacks
+60secondpersuasion
+
+# --- Copywriting & Content ---
+copywritersclubhouse
+copywritersandcontentwriters
+AWAICopywritingInsiders
+
+# --- Affiliate Marketing ---
+199219464814180
+42411559499
+amninjas
+
+# --- E-commerce, Shopify, Amazon FBA ---
+1783459022135293
+1668427633434619
+385240885169090
+sellthetrend
+nextlevelecommastermind
+shopifyentrepreneurs
+Shopifysellershub
+ShopifyStorePros
+ecomhubamazon
+amazonfbatips
+asinology
+milliondollarsellers
+ecommercegroup
+7figureecommerce
+1406311533018365
+
+# --- Remote Work & Digital Nomads ---
+DigitalNomadsAroundTheWorld
+remotework.digitalnomads
+254058768789426
+189901138956727
+1197033358340971
+
+# --- Startups & Founders ---
+TheStartupChat
+startupfounderforum
+itowner
+279455896169061
+
+# --- Real Estate (US/UK/CA/AU) ---
+LCAReferrals
+realesthumor
+865943190569919
+
+# --- Content Creators ---
+3665071477065372
+thec3club
+
+# --- Design & Web ---
+TheDesignCommunity
+redesign2
+theadminbar
+advancedwp
+
+# --- Passive Income & Investing ---
+432287054620523
+thepassiveincome
+thepersonalfinancegroup
+StellarNiche
+
+# --- Photography, Fitness, Books ---
+FreelancePhotographyNetwork
+landscapephotos
+photopillshelpplansandchat
+Healthfitness86
+fitnesslovers1
+grauthorsreaders

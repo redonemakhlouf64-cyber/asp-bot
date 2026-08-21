@@ -2,13 +2,13 @@ name: Auto Joiner
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 */4 * * *'   # every 4 hours
   workflow_dispatch:
 
 jobs:
   join:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       - name: Checkout
@@ -30,13 +30,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Check cookies
+      - name: Check cookies & groups
         run: |
-          echo "Cookies found:"
-          ls -lh cookies/
+          echo "Cookies:" && ls -lh cookies/
+          echo "Groups count:" && grep -c -v '^#\|^$' groups.txt || true
 
       - name: Run joiner
         run: python joiner.py
+        continue-on-error: true
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: joiner-screenshots
+          path: screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Commit updated state
         if: always()
@@ -44,5 +54,5 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add state/ || true
-          git diff --cached --quiet || git commit -m "chore: update state [skip ci]"
+          git diff --cached --quiet || git commit -m "chore: update join state [skip ci]"
           git push || true

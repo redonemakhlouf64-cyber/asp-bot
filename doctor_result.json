@@ -1,7 +1,11 @@
 {
-  "detected": [],
+  "detected": [
+    "rate_limit"
+  ],
   "fixed": [],
   "failed_to_fix": [],
-  "notifications": [],
-  "can_retry": false
+  "notifications": [
+    "🚦 Rate limit من فيسبوك — انتظار 30 دقيقة"
+  ],
+  "can_retry": true
 }

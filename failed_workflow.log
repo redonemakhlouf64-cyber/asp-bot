@@ -1,101 +1,118 @@
-join	Install dependencies	﻿2026-08-21T15:57:18.3460722Z ##***group***Run sudo apt-get update
-join	Install dependencies	2026-08-21T15:57:18.3463404Z ^[***36;1msudo apt-get update^[***0m
-join	Install dependencies	2026-08-21T15:57:18.3465591Z ^[***36;1mpip install -r requirements.txt^[***0m
-join	Install dependencies	2026-08-21T15:57:18.3469139Z ^[***36;1mplaywright install --with-deps chromium || playwright install chromium^[***0m
-join	Install dependencies	2026-08-21T15:57:18.3805854Z shell: /usr/bin/bash -e ***0***
-join	Install dependencies	2026-08-21T15:57:18.3807819Z env:
-join	Install dependencies	2026-08-21T15:57:18.3809780Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.16/x64
-join	Install dependencies	2026-08-21T15:57:18.3812620Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.16/x64/lib/pkgconfig
-join	Install dependencies	2026-08-21T15:57:18.3815279Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.16/x64
-join	Install dependencies	2026-08-21T15:57:18.3817733Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.16/x64
-join	Install dependencies	2026-08-21T15:57:18.3820305Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.16/x64
-join	Install dependencies	2026-08-21T15:57:18.3822942Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.16/x64/lib
-join	Install dependencies	2026-08-21T15:57:18.3825363Z ##***endgroup***
-join	Install dependencies	2026-08-21T15:57:18.5138997Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist ***144 B***
-join	Install dependencies	2026-08-21T15:57:18.5495337Z Hit:6 https://packages.microsoft.com/repos/azure-cli jammy InRelease
-join	Install dependencies	2026-08-21T15:57:18.5500970Z Get:7 https://packages.microsoft.com/ubuntu/22.04/prod jammy InRelease ***3632 B***
-join	Install dependencies	2026-08-21T15:57:18.5518186Z Hit:2 http://azure.archive.ubuntu.com/ubuntu jammy InRelease
-join	Install dependencies	2026-08-21T15:57:18.5537845Z Get:3 http://azure.archive.ubuntu.com/ubuntu jammy-updates InRelease ***128 kB***
-join	Install dependencies	2026-08-21T15:57:18.5585894Z Get:4 http://azure.archive.ubuntu.com/ubuntu jammy-backports InRelease ***127 kB***
-join	Install dependencies	2026-08-21T15:57:18.5614510Z Get:5 http://azure.archive.ubuntu.com/ubuntu jammy-security InRelease ***129 kB***
-join	Install dependencies	2026-08-21T15:57:18.6675127Z Get:8 https://dl.google.com/linux/chrome-stable/deb stable InRelease ***2548 B***
-join	Install dependencies	2026-08-21T15:57:18.6863803Z Get:9 https://packages.microsoft.com/ubuntu/22.04/prod jammy/main arm64 Packages ***440 kB***
-join	Install dependencies	2026-08-21T15:57:18.7018037Z Get:10 https://packages.microsoft.com/ubuntu/22.04/prod jammy/main all Packages ***1331 B***
-join	Install dependencies	2026-08-21T15:57:18.7054795Z Get:11 https://packages.microsoft.com/ubuntu/22.04/prod jammy/main amd64 Packages ***672 kB***
-join	Install dependencies	2026-08-21T15:57:18.7120620Z Get:12 https://packages.microsoft.com/ubuntu/22.04/prod jammy/main armhf Packages ***23.1 kB***
-join	Install dependencies	2026-08-21T15:57:18.8863363Z Get:13 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 Packages ***3763 kB***
-join	Install dependencies	2026-08-21T15:57:18.9158573Z Get:14 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main Translation-en ***560 kB***
-join	Install dependencies	2026-08-21T15:57:18.9194665Z Get:15 http://azure.archive.ubuntu.com/ubuntu jammy-updates/restricted amd64 Packages ***6496 kB***
-join	Install dependencies	2026-08-21T15:57:18.9528979Z Get:16 http://azure.archive.ubuntu.com/ubuntu jammy-updates/restricted Translation-en ***1246 kB***
-join	Install dependencies	2026-08-21T15:57:18.9607906Z Get:17 http://azure.archive.ubuntu.com/ubuntu jammy-updates/universe amd64 Packages ***1281 kB***
-join	Install dependencies	2026-08-21T15:57:18.9690016Z Get:18 http://azure.archive.ubuntu.com/ubuntu jammy-updates/universe Translation-en ***322 kB***
-join	Install dependencies	2026-08-21T15:57:19.1116949Z Get:19 http://azure.archive.ubuntu.com/ubuntu jammy-security/main amd64 Packages ***3483 kB***
-join	Install dependencies	2026-08-21T15:57:19.1367853Z Get:20 http://azure.archive.ubuntu.com/ubuntu jammy-security/main Translation-en ***489 kB***
-join	Install dependencies	2026-08-21T15:57:19.1414961Z Get:21 http://azure.archive.ubuntu.com/ubuntu jammy-security/restricted amd64 Packages ***6239 kB***
-join	Install dependencies	2026-08-21T15:57:19.1771663Z Get:22 http://azure.archive.ubuntu.com/ubuntu jammy-security/restricted Translation-en ***1200 kB***
-join	Install dependencies	2026-08-21T15:57:19.2320741Z Get:23 http://azure.archive.ubuntu.com/ubuntu jammy-security/universe amd64 Packages ***1047 kB***
-join	Install dependencies	2026-08-21T15:57:19.2387559Z Get:24 http://azure.archive.ubuntu.com/ubuntu jammy-security/universe Translation-en ***235 kB***
-join	Install dependencies	2026-08-21T15:57:19.2482426Z Get:25 https://dl.google.com/linux/chrome-stable/deb stable/main amd64 Packages ***1409 B***
-join	Install dependencies	2026-08-21T15:57:25.3001806Z Fetched 27.9 MB in 4s (7860 kB/s)
-join	Install dependencies	2026-08-21T15:57:26.6441506Z Reading package lists...
-join	Install dependencies	2026-08-21T15:57:30.0834458Z Collecting requests>=2.31.0 (from -r requirements.txt (line 1))
-join	Install dependencies	2026-08-21T15:57:30.1255640Z   Downloading requests-2.34.2-py3-none-any.whl.metadata (4.8 kB)
-join	Install dependencies	2026-08-21T15:57:30.1561109Z Collecting selenium>=4.15.0 (from -r requirements.txt (line 2))
-join	Install dependencies	2026-08-21T15:57:30.1602611Z   Downloading selenium-4.47.0-py3-none-any.whl.metadata (7.4 kB)
-join	Install dependencies	2026-08-21T15:57:30.1742828Z Collecting python-dotenv>=1.0.0 (from -r requirements.txt (line 3))
-join	Install dependencies	2026-08-21T15:57:30.1783163Z   Downloading python_dotenv-1.2.3-py3-none-any.whl.metadata (29 kB)
-join	Install dependencies	2026-08-21T15:57:30.2998666Z Collecting charset_normalizer<4,>=2 (from requests>=2.31.0->-r requirements.txt (line 1))
-join	Install dependencies	2026-08-21T15:57:30.3039951Z   Downloading charset_normalizer-3.5.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (45 kB)
-join	Install dependencies	2026-08-21T15:57:30.3201002Z Collecting idna<4,>=2.5 (from requests>=2.31.0->-r requirements.txt (line 1))
-join	Install dependencies	2026-08-21T15:57:30.3237714Z   Downloading idna-3.19-py3-none-any.whl.metadata (9.2 kB)
-join	Install dependencies	2026-08-21T15:57:30.3418512Z Collecting urllib3<3,>=1.26 (from requests>=2.31.0->-r requirements.txt (line 1))
-join	Install dependencies	2026-08-21T15:57:30.3462101Z   Downloading urllib3-2.7.0-py3-none-any.whl.metadata (6.9 kB)
-join	Install dependencies	2026-08-21T15:57:30.3616820Z Collecting certifi>=2023.5.7 (from requests>=2.31.0->-r requirements.txt (line 1))
-join	Install dependencies	2026-08-21T15:57:30.3654233Z   Downloading certifi-2026.7.22-py3-none-any.whl.metadata (2.5 kB)
-join	Install dependencies	2026-08-21T15:57:30.3797466Z Collecting trio<1.0,>=0.31.0 (from selenium>=4.15.0->-r requirements.txt (line 2))
-join	Install dependencies	2026-08-21T15:57:30.3836313Z   Downloading trio-0.34.0-py3-none-any.whl.metadata (8.5 kB)
-join	Install dependencies	2026-08-21T15:57:30.3945111Z Collecting trio-websocket<1.0,>=0.12.2 (from selenium>=4.15.0->-r requirements.txt (line 2))
-join	Install dependencies	2026-08-21T15:57:30.3981857Z   Downloading trio_websocket-0.12.2-py3-none-any.whl.metadata (5.1 kB)
-join	Install dependencies	2026-08-21T15:57:30.4124437Z Collecting typing_extensions<5.0,>=4.15.0 (from selenium>=4.15.0->-r requirements.txt (line 2))
-join	Install dependencies	2026-08-21T15:57:30.4164151Z   Downloading typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
-join	Install dependencies	2026-08-21T15:57:30.4332839Z Collecting websocket-client<2.0,>=1.8.0 (from selenium>=4.15.0->-r requirements.txt (line 2))
-join	Install dependencies	2026-08-21T15:57:30.4369930Z   Downloading websocket_client-1.9.0-py3-none-any.whl.metadata (8.3 kB)
-join	Install dependencies	2026-08-21T15:57:30.4500091Z Collecting attrs>=23.2.0 (from trio<1.0,>=0.31.0->selenium>=4.15.0->-r requirements.txt (line 2))
-join	Install dependencies	2026-08-21T15:57:30.4537140Z   Downloading attrs-26.1.0-py3-none-any.whl.metadata (8.8 kB)
-join	Install dependencies	2026-08-21T15:57:30.4661909Z Collecting sortedcontainers (from trio<1.0,>=0.31.0->selenium>=4.15.0->-r requirements.txt (line 2))
-join	Install dependencies	2026-08-21T15:57:30.4699480Z   Downloading sortedcontainers-2.4.0-py2.py3-none-any.whl.metadata (10 kB)
-join	Install dependencies	2026-08-21T15:57:30.4800346Z Collecting outcome (from trio<1.0,>=0.31.0->selenium>=4.15.0->-r requirements.txt (line 2))
-join	Install dependencies	2026-08-21T15:57:30.4839372Z   Downloading outcome-1.3.0.post0-py2.py3-none-any.whl.metadata (2.6 kB)
-join	Install dependencies	2026-08-21T15:57:30.4937632Z Collecting sniffio>=1.3.0 (from trio<1.0,>=0.31.0->selenium>=4.15.0->-r requirements.txt (line 2))
-join	Install dependencies	2026-08-21T15:57:30.4973986Z   Downloading sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
-join	Install dependencies	2026-08-21T15:57:30.5094363Z Collecting wsproto>=0.14 (from trio-websocket<1.0,>=0.12.2->selenium>=4.15.0->-r requirements.txt (line 2))
-join	Install dependencies	2026-08-21T15:57:30.5130709Z   Downloading wsproto-1.3.2-py3-none-any.whl.metadata (5.2 kB)
-join	Install dependencies	2026-08-21T15:57:30.5244317Z Collecting pysocks!=1.5.7,<2.0,>=1.5.6 (from urllib3***socks***<3.0,>=2.6.3->selenium>=4.15.0->-r requirements.txt (line 2))
-join	Install dependencies	2026-08-21T15:57:30.5280599Z   Downloading PySocks-1.7.1-py3-none-any.whl.metadata (13 kB)
-join	Install dependencies	2026-08-21T15:57:30.5413884Z Collecting h11<1,>=0.16.0 (from wsproto>=0.14->trio-websocket<1.0,>=0.12.2->selenium>=4.15.0->-r requirements.txt (line 2))
-join	Install dependencies	2026-08-21T15:57:30.5451844Z   Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
-join	Install dependencies	2026-08-21T15:57:30.5530824Z Downloading requests-2.34.2-py3-none-any.whl (73 kB)
-join	Install dependencies	2026-08-21T15:57:30.5590620Z Downloading charset_normalizer-3.5.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (262 kB)
-join	Install dependencies	2026-08-21T15:57:30.5670342Z Downloading idna-3.19-py3-none-any.whl (68 kB)
-join	Install dependencies	2026-08-21T15:57:30.5726844Z Downloading urllib3-2.7.0-py3-none-any.whl (131 kB)
-join	Install dependencies	2026-08-21T15:57:30.5787822Z Downloading selenium-4.47.0-py3-none-any.whl (9.5 MB)
-join	Install dependencies	2026-08-21T15:57:30.6205956Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.5/9.5 MB 240.1 MB/s  0:00:00
-join	Install dependencies	2026-08-21T15:57:30.6246362Z Downloading trio-0.34.0-py3-none-any.whl (511 kB)
-join	Install dependencies	2026-08-21T15:57:30.6337936Z Downloading trio_websocket-0.12.2-py3-none-any.whl (21 kB)
-join	Install dependencies	2026-08-21T15:57:30.6394521Z Downloading typing_extensions-4.16.0-py3-none-any.whl (45 kB)
-join	Install dependencies	2026-08-21T15:57:30.6451470Z Downloading PySocks-1.7.1-py3-none-any.whl (16 kB)
-join	Install dependencies	2026-08-21T15:57:30.6508121Z Downloading websocket_client-1.9.0-py3-none-any.whl (82 kB)
-join	Install dependencies	2026-08-21T15:57:30.6565011Z Downloading python_dotenv-1.2.3-py3-none-any.whl (22 kB)
-join	Install dependencies	2026-08-21T15:57:30.6621112Z Downloading attrs-26.1.0-py3-none-any.whl (67 kB)
-join	Install dependencies	2026-08-21T15:57:30.6680652Z Downloading certifi-2026.7.22-py3-none-any.whl (136 kB)
-join	Install dependencies	2026-08-21T15:57:30.6740571Z Downloading outcome-1.3.0.post0-py2.py3-none-any.whl (10 kB)
-join	Install dependencies	2026-08-21T15:57:30.6796029Z Downloading sniffio-1.3.1-py3-none-any.whl (10 kB)
-join	Install dependencies	2026-08-21T15:57:30.6860757Z Downloading wsproto-1.3.2-py3-none-any.whl (24 kB)
-join	Install dependencies	2026-08-21T15:57:30.6916874Z Downloading h11-0.16.0-py3-none-any.whl (37 kB)
-join	Install dependencies	2026-08-21T15:57:30.6975067Z Downloading sortedcontainers-2.4.0-py2.py3-none-any.whl (29 kB)
-join	Install dependencies	2026-08-21T15:57:30.9610177Z Installing collected packages: sortedcontainers, websocket-client, urllib3, typing_extensions, sniffio, python-dotenv, pysocks, idna, h11, charset_normalizer, certifi, attrs, wsproto, requests, outcome, trio, trio-websocket, selenium
-join	Install dependencies	2026-08-21T15:57:32.6487161Z 
-join	Install dependencies	2026-08-21T15:57:32.6505437Z Successfully installed attrs-26.1.0 certifi-2026.7.22 charset_normalizer-3.5.1 h11-0.16.0 idna-3.19 outcome-1.3.0.post0 pysocks-1.7.1 python-dotenv-1.2.3 requests-2.34.2 selenium-4.47.0 sniffio-1.3.1 sortedcontainers-2.4.0 trio-0.34.0 trio-websocket-0.12.2 typing_extensions-4.16.0 urllib3-2.7.0 websocket-client-1.9.0 wsproto-1.3.2
-join	Install dependencies	2026-08-21T15:57:32.7254061Z /home/runner/work/_temp/da1ec955-f9ae-4d9e-b5fb-6939320c7536.sh: line 3: playwright: command not found
-join	Install dependencies	2026-08-21T15:57:32.7258206Z /home/runner/work/_temp/da1ec955-f9ae-4d9e-b5fb-6939320c7536.sh: line 3: playwright: command not found
-join	Install dependencies	2026-08-21T15:57:32.7278493Z ##***error***Process completed with exit code 127.
+join	Install dependencies	﻿2026-08-21T16:09:26.6938263Z ##***group***Run sudo apt-get update
+join	Install dependencies	2026-08-21T16:09:26.6940224Z ^[***36;1msudo apt-get update^[***0m
+join	Install dependencies	2026-08-21T16:09:26.6941597Z ^[***36;1mpip install -r requirements.txt^[***0m
+join	Install dependencies	2026-08-21T16:09:26.6943016Z ^[***36;1mplaywright install --with-deps chromium || playwright install chromium^[***0m
+join	Install dependencies	2026-08-21T16:09:26.7347984Z shell: /usr/bin/bash -e ***0***
+join	Install dependencies	2026-08-21T16:09:26.7349152Z env:
+join	Install dependencies	2026-08-21T16:09:26.7350608Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.16/x64
+join	Install dependencies	2026-08-21T16:09:26.7352042Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.16/x64/lib/pkgconfig
+join	Install dependencies	2026-08-21T16:09:26.7353439Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.16/x64
+join	Install dependencies	2026-08-21T16:09:26.7354727Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.16/x64
+join	Install dependencies	2026-08-21T16:09:26.7356033Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.16/x64
+join	Install dependencies	2026-08-21T16:09:26.7357316Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.16/x64/lib
+join	Install dependencies	2026-08-21T16:09:26.7358477Z ##***endgroup***
+join	Install dependencies	2026-08-21T16:09:26.8612056Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist ***144 B***
+join	Install dependencies	2026-08-21T16:09:26.9000649Z Hit:2 http://azure.archive.ubuntu.com/ubuntu jammy InRelease
+join	Install dependencies	2026-08-21T16:09:26.9045817Z Get:3 http://azure.archive.ubuntu.com/ubuntu jammy-updates InRelease ***128 kB***
+join	Install dependencies	2026-08-21T16:09:26.9121423Z Get:4 http://azure.archive.ubuntu.com/ubuntu jammy-backports InRelease ***127 kB***
+join	Install dependencies	2026-08-21T16:09:26.9164950Z Get:5 http://azure.archive.ubuntu.com/ubuntu jammy-security InRelease ***129 kB***
+join	Install dependencies	2026-08-21T16:09:26.9189776Z Hit:6 https://packages.microsoft.com/repos/azure-cli jammy InRelease
+join	Install dependencies	2026-08-21T16:09:26.9209336Z Get:7 https://packages.microsoft.com/ubuntu/22.04/prod jammy InRelease ***3632 B***
+join	Install dependencies	2026-08-21T16:09:27.0295042Z Get:8 https://dl.google.com/linux/chrome-stable/deb stable InRelease ***2548 B***
+join	Install dependencies	2026-08-21T16:09:27.1137181Z Get:9 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 Packages ***3763 kB***
+join	Install dependencies	2026-08-21T16:09:27.1357476Z Get:10 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main Translation-en ***560 kB***
+join	Install dependencies	2026-08-21T16:09:27.1402422Z Get:11 http://azure.archive.ubuntu.com/ubuntu jammy-updates/restricted amd64 Packages ***6496 kB***
+join	Install dependencies	2026-08-21T16:09:27.1794626Z Get:12 http://azure.archive.ubuntu.com/ubuntu jammy-updates/restricted Translation-en ***1246 kB***
+join	Install dependencies	2026-08-21T16:09:27.1853227Z Get:13 http://azure.archive.ubuntu.com/ubuntu jammy-updates/universe amd64 Packages ***1281 kB***
+join	Install dependencies	2026-08-21T16:09:27.1940575Z Get:14 http://azure.archive.ubuntu.com/ubuntu jammy-updates/universe Translation-en ***322 kB***
+join	Install dependencies	2026-08-21T16:09:27.3050054Z Get:15 http://azure.archive.ubuntu.com/ubuntu jammy-security/main amd64 Packages ***3483 kB***
+join	Install dependencies	2026-08-21T16:09:27.3232963Z Get:16 http://azure.archive.ubuntu.com/ubuntu jammy-security/main Translation-en ***489 kB***
+join	Install dependencies	2026-08-21T16:09:27.3311999Z Get:17 http://azure.archive.ubuntu.com/ubuntu jammy-security/restricted amd64 Packages ***6239 kB***
+join	Install dependencies	2026-08-21T16:09:27.3685554Z Get:18 http://azure.archive.ubuntu.com/ubuntu jammy-security/restricted Translation-en ***1200 kB***
+join	Install dependencies	2026-08-21T16:09:27.4188436Z Get:19 http://azure.archive.ubuntu.com/ubuntu jammy-security/universe amd64 Packages ***1047 kB***
+join	Install dependencies	2026-08-21T16:09:27.4213418Z Get:21 https://packages.microsoft.com/ubuntu/22.04/prod jammy/main all Packages ***1331 B***
+join	Install dependencies	2026-08-21T16:09:27.4263446Z Get:20 http://azure.archive.ubuntu.com/ubuntu jammy-security/universe Translation-en ***235 kB***
+join	Install dependencies	2026-08-21T16:09:27.4271788Z Get:22 https://packages.microsoft.com/ubuntu/22.04/prod jammy/main arm64 Packages ***440 kB***
+join	Install dependencies	2026-08-21T16:09:27.4293390Z Get:23 https://packages.microsoft.com/ubuntu/22.04/prod jammy/main armhf Packages ***23.1 kB***
+join	Install dependencies	2026-08-21T16:09:27.4315835Z Get:24 https://packages.microsoft.com/ubuntu/22.04/prod jammy/main amd64 Packages ***672 kB***
+join	Install dependencies	2026-08-21T16:09:27.5227668Z Get:25 https://dl.google.com/linux/chrome-stable/deb stable/main amd64 Packages ***1409 B***
+join	Install dependencies	2026-08-21T16:09:33.0167708Z Fetched 27.9 MB in 3s (8807 kB/s)
+join	Install dependencies	2026-08-21T16:09:34.3631755Z Reading package lists...
+join	Install dependencies	2026-08-21T16:09:37.6889448Z Collecting selenium>=4.15.0 (from -r requirements.txt (line 1))
+join	Install dependencies	2026-08-21T16:09:37.7229033Z   Downloading selenium-4.47.0-py3-none-any.whl.metadata (7.4 kB)
+join	Install dependencies	2026-08-21T16:09:37.7427885Z Collecting requests>=2.31.0 (from -r requirements.txt (line 2))
+join	Install dependencies	2026-08-21T16:09:37.7459128Z   Downloading requests-2.34.2-py3-none-any.whl.metadata (4.8 kB)
+join	Install dependencies	2026-08-21T16:09:37.7599383Z Collecting python-dotenv>=1.0.0 (from -r requirements.txt (line 3))
+join	Install dependencies	2026-08-21T16:09:37.7632531Z   Downloading python_dotenv-1.2.3-py3-none-any.whl.metadata (29 kB)
+join	Install dependencies	2026-08-21T16:09:37.7761649Z Collecting pytesseract>=0.3.10 (from -r requirements.txt (line 4))
+join	Install dependencies	2026-08-21T16:09:37.7792007Z   Downloading pytesseract-0.3.13-py3-none-any.whl.metadata (11 kB)
+join	Install dependencies	2026-08-21T16:09:37.9477277Z Collecting Pillow>=10.0.0 (from -r requirements.txt (line 5))
+join	Install dependencies	2026-08-21T16:09:37.9511645Z   Downloading pillow-12.3.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (9.1 kB)
+join	Install dependencies	2026-08-21T16:09:37.9696258Z Collecting SpeechRecognition>=3.10.0 (from -r requirements.txt (line 6))
+join	Install dependencies	2026-08-21T16:09:37.9737379Z   Downloading speechrecognition-3.17.0-py3-none-any.whl.metadata (28 kB)
+join	Install dependencies	2026-08-21T16:09:37.9911498Z Collecting pydub>=0.25.1 (from -r requirements.txt (line 7))
+join	Install dependencies	2026-08-21T16:09:37.9943568Z   Downloading pydub-0.25.1-py2.py3-none-any.whl.metadata (1.4 kB)
+join	Install dependencies	2026-08-21T16:09:38.0091957Z Collecting certifi>=2026.2.25 (from selenium>=4.15.0->-r requirements.txt (line 1))
+join	Install dependencies	2026-08-21T16:09:38.0127856Z   Downloading certifi-2026.7.22-py3-none-any.whl.metadata (2.5 kB)
+join	Install dependencies	2026-08-21T16:09:38.0257682Z Collecting trio<1.0,>=0.31.0 (from selenium>=4.15.0->-r requirements.txt (line 1))
+join	Install dependencies	2026-08-21T16:09:38.0292183Z   Downloading trio-0.34.0-py3-none-any.whl.metadata (8.5 kB)
+join	Install dependencies	2026-08-21T16:09:38.0417964Z Collecting trio-websocket<1.0,>=0.12.2 (from selenium>=4.15.0->-r requirements.txt (line 1))
+join	Install dependencies	2026-08-21T16:09:38.0458114Z   Downloading trio_websocket-0.12.2-py3-none-any.whl.metadata (5.1 kB)
+join	Install dependencies	2026-08-21T16:09:38.0633957Z Collecting typing_extensions<5.0,>=4.15.0 (from selenium>=4.15.0->-r requirements.txt (line 1))
+join	Install dependencies	2026-08-21T16:09:38.0671107Z   Downloading typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+join	Install dependencies	2026-08-21T16:09:38.0858913Z Collecting urllib3<3.0,>=2.6.3 (from urllib3***socks***<3.0,>=2.6.3->selenium>=4.15.0->-r requirements.txt (line 1))
+join	Install dependencies	2026-08-21T16:09:38.0892250Z   Downloading urllib3-2.7.0-py3-none-any.whl.metadata (6.9 kB)
+join	Install dependencies	2026-08-21T16:09:38.1048326Z Collecting websocket-client<2.0,>=1.8.0 (from selenium>=4.15.0->-r requirements.txt (line 1))
+join	Install dependencies	2026-08-21T16:09:38.1081194Z   Downloading websocket_client-1.9.0-py3-none-any.whl.metadata (8.3 kB)
+join	Install dependencies	2026-08-21T16:09:38.1218545Z Collecting attrs>=23.2.0 (from trio<1.0,>=0.31.0->selenium>=4.15.0->-r requirements.txt (line 1))
+join	Install dependencies	2026-08-21T16:09:38.1249889Z   Downloading attrs-26.1.0-py3-none-any.whl.metadata (8.8 kB)
+join	Install dependencies	2026-08-21T16:09:38.1372110Z Collecting sortedcontainers (from trio<1.0,>=0.31.0->selenium>=4.15.0->-r requirements.txt (line 1))
+join	Install dependencies	2026-08-21T16:09:38.1403571Z   Downloading sortedcontainers-2.4.0-py2.py3-none-any.whl.metadata (10 kB)
+join	Install dependencies	2026-08-21T16:09:38.1542556Z Collecting idna (from trio<1.0,>=0.31.0->selenium>=4.15.0->-r requirements.txt (line 1))
+join	Install dependencies	2026-08-21T16:09:38.1573575Z   Downloading idna-3.19-py3-none-any.whl.metadata (9.2 kB)
+join	Install dependencies	2026-08-21T16:09:38.1713347Z Collecting outcome (from trio<1.0,>=0.31.0->selenium>=4.15.0->-r requirements.txt (line 1))
+join	Install dependencies	2026-08-21T16:09:38.1754819Z   Downloading outcome-1.3.0.post0-py2.py3-none-any.whl.metadata (2.6 kB)
+join	Install dependencies	2026-08-21T16:09:38.1866180Z Collecting sniffio>=1.3.0 (from trio<1.0,>=0.31.0->selenium>=4.15.0->-r requirements.txt (line 1))
+join	Install dependencies	2026-08-21T16:09:38.1897911Z   Downloading sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
+join	Install dependencies	2026-08-21T16:09:38.2030823Z Collecting wsproto>=0.14 (from trio-websocket<1.0,>=0.12.2->selenium>=4.15.0->-r requirements.txt (line 1))
+join	Install dependencies	2026-08-21T16:09:38.2062398Z   Downloading wsproto-1.3.2-py3-none-any.whl.metadata (5.2 kB)
+join	Install dependencies	2026-08-21T16:09:38.2182555Z Collecting pysocks!=1.5.7,<2.0,>=1.5.6 (from urllib3***socks***<3.0,>=2.6.3->selenium>=4.15.0->-r requirements.txt (line 1))
+join	Install dependencies	2026-08-21T16:09:38.2213104Z   Downloading PySocks-1.7.1-py3-none-any.whl.metadata (13 kB)
+join	Install dependencies	2026-08-21T16:09:38.3315730Z Collecting charset_normalizer<4,>=2 (from requests>=2.31.0->-r requirements.txt (line 2))
+join	Install dependencies	2026-08-21T16:09:38.3355283Z   Downloading charset_normalizer-3.5.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (45 kB)
+join	Install dependencies	2026-08-21T16:09:38.3563728Z Collecting packaging>=21.3 (from pytesseract>=0.3.10->-r requirements.txt (line 4))
+join	Install dependencies	2026-08-21T16:09:38.3594359Z   Downloading packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+join	Install dependencies	2026-08-21T16:09:38.3751893Z Collecting h11<1,>=0.16.0 (from wsproto>=0.14->trio-websocket<1.0,>=0.12.2->selenium>=4.15.0->-r requirements.txt (line 1))
+join	Install dependencies	2026-08-21T16:09:38.3782724Z   Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+join	Install dependencies	2026-08-21T16:09:38.3856983Z Downloading selenium-4.47.0-py3-none-any.whl (9.5 MB)
+join	Install dependencies	2026-08-21T16:09:38.4405474Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.5/9.5 MB 186.6 MB/s  0:00:00
+join	Install dependencies	2026-08-21T16:09:38.4439197Z Downloading trio-0.34.0-py3-none-any.whl (511 kB)
+join	Install dependencies	2026-08-21T16:09:38.4520903Z Downloading trio_websocket-0.12.2-py3-none-any.whl (21 kB)
+join	Install dependencies	2026-08-21T16:09:38.4573606Z Downloading typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+join	Install dependencies	2026-08-21T16:09:38.4623934Z Downloading urllib3-2.7.0-py3-none-any.whl (131 kB)
+join	Install dependencies	2026-08-21T16:09:38.4682489Z Downloading PySocks-1.7.1-py3-none-any.whl (16 kB)
+join	Install dependencies	2026-08-21T16:09:38.4732201Z Downloading websocket_client-1.9.0-py3-none-any.whl (82 kB)
+join	Install dependencies	2026-08-21T16:09:38.4785903Z Downloading requests-2.34.2-py3-none-any.whl (73 kB)
+join	Install dependencies	2026-08-21T16:09:38.4840812Z Downloading charset_normalizer-3.5.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (262 kB)
+join	Install dependencies	2026-08-21T16:09:38.4902005Z Downloading idna-3.19-py3-none-any.whl (68 kB)
+join	Install dependencies	2026-08-21T16:09:38.4955638Z Downloading python_dotenv-1.2.3-py3-none-any.whl (22 kB)
+join	Install dependencies	2026-08-21T16:09:38.5004692Z Downloading pytesseract-0.3.13-py3-none-any.whl (14 kB)
+join	Install dependencies	2026-08-21T16:09:38.5131651Z Downloading pillow-12.3.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (6.9 MB)
+join	Install dependencies	2026-08-21T16:09:38.5440569Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.9/6.9 MB 237.3 MB/s  0:00:00
+join	Install dependencies	2026-08-21T16:09:38.5495915Z Downloading speechrecognition-3.17.0-py3-none-any.whl (32.9 MB)
+join	Install dependencies	2026-08-21T16:09:39.0983053Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 32.9/32.9 MB 59.7 MB/s  0:00:00
+join	Install dependencies	2026-08-21T16:09:39.1017933Z Downloading pydub-0.25.1-py2.py3-none-any.whl (32 kB)
+join	Install dependencies	2026-08-21T16:09:39.1081194Z Downloading attrs-26.1.0-py3-none-any.whl (67 kB)
+join	Install dependencies	2026-08-21T16:09:39.1162769Z Downloading certifi-2026.7.22-py3-none-any.whl (136 kB)
+join	Install dependencies	2026-08-21T16:09:39.1219920Z Downloading outcome-1.3.0.post0-py2.py3-none-any.whl (10 kB)
+join	Install dependencies	2026-08-21T16:09:39.1273643Z Downloading packaging-26.3-py3-none-any.whl (129 kB)
+join	Install dependencies	2026-08-21T16:09:39.1352923Z Downloading sniffio-1.3.1-py3-none-any.whl (10 kB)
+join	Install dependencies	2026-08-21T16:09:39.1396402Z Downloading wsproto-1.3.2-py3-none-any.whl (24 kB)
+join	Install dependencies	2026-08-21T16:09:39.1449492Z Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+join	Install dependencies	2026-08-21T16:09:39.1550331Z Downloading sortedcontainers-2.4.0-py2.py3-none-any.whl (29 kB)
+join	Install dependencies	2026-08-21T16:09:39.4502536Z Installing collected packages: sortedcontainers, pydub, websocket-client, urllib3, typing_extensions, sniffio, python-dotenv, pysocks, Pillow, packaging, idna, h11, charset_normalizer, certifi, attrs, wsproto, SpeechRecognition, requests, pytesseract, outcome, trio, trio-websocket, selenium
+join	Install dependencies	2026-08-21T16:09:41.8553082Z 
+join	Install dependencies	2026-08-21T16:09:41.8570572Z Successfully installed Pillow-12.3.0 SpeechRecognition-3.17.0 attrs-26.1.0 certifi-2026.7.22 charset_normalizer-3.5.1 h11-0.16.0 idna-3.19 outcome-1.3.0.post0 packaging-26.3 pydub-0.25.1 pysocks-1.7.1 pytesseract-0.3.13 python-dotenv-1.2.3 requests-2.34.2 selenium-4.47.0 sniffio-1.3.1 sortedcontainers-2.4.0 trio-0.34.0 trio-websocket-0.12.2 typing_extensions-4.16.0 urllib3-2.7.0 websocket-client-1.9.0 wsproto-1.3.2
+join	Install dependencies	2026-08-21T16:09:41.9365449Z /home/runner/work/_temp/ca21fbc6-983e-41fd-aacb-16db27549b82.sh: line 3: playwright: command not found
+join	Install dependencies	2026-08-21T16:09:41.9367972Z /home/runner/work/_temp/ca21fbc6-983e-41fd-aacb-16db27549b82.sh: line 3: playwright: command not found
+join	Install dependencies	2026-08-21T16:09:41.9385844Z ##***error***Process completed with exit code 127.

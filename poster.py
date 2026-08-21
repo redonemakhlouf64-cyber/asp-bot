@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-poster.py v7.2 - Facebook Poster (Cookies-Only, Desktop www)
-Uses the same proven pattern as discover.py which succeeded.
+poster.py v7.3 - Facebook Poster via mbasic.facebook.com
+Uses the basic HTML version of Facebook for bulletproof posting.
+No JavaScript, no React, no CSS shenanigans.
 """
 
 import os
@@ -53,18 +54,19 @@ FB_COOKIES = os.environ.get("FB_COOKIES_" + str(ACC_NUM), "").strip()
 CONTENT_RAW = os.environ.get("CONTENT", "").strip()
 FORCE_ALL = os.environ.get("FORCE_ALL", "").lower() in ("true", "1", "yes")
 
-FB_HOME = "https://www.facebook.com/"
+# Use mbasic (basic HTML) for reliable posting
+MBASIC_HOME = "https://mbasic.facebook.com/"
+MBASIC_COMPOSER = "https://mbasic.facebook.com/composer/mbasic/"
 
-# Desktop UA (same as discover.py which worked)
-DESKTOP_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-              "AppleWebKit/537.36 (KHTML, like Gecko) "
-              "Chrome/120.0.0.0 Safari/537.36")
+# Use a mobile UA for mbasic (it's the mobile basic version)
+MBASIC_UA = ("Mozilla/5.0 (Linux; Android 10; SM-G970F) "
+             "AppleWebKit/537.36 (KHTML, like Gecko) "
+             "Chrome/120.0.0.0 Mobile Safari/537.36")
 
 STEALTH_JS = """
 Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
 Object.defineProperty(navigator, 'plugins', {get: () => [1,2,3,4,5]});
 Object.defineProperty(navigator, 'languages', {get: () => ['en-US','en']});
-window.chrome = {runtime: {}};
 """
 
 
@@ -83,13 +85,13 @@ def pick_content():
 
 
 def verify_login(page):
-    log("STEP 1/3: Verify session with cookies")
+    log("STEP 1/3: Verify session on mbasic.facebook.com")
     try:
-        page.goto(FB_HOME, wait_until="domcontentloaded", timeout=60000)
+        page.goto(MBASIC_HOME, wait_until="domcontentloaded", timeout=60000)
     except Exception as e:
         log("❌ goto failed: " + str(e))
         return False
-    time.sleep(random.uniform(4, 6))
+    time.sleep(random.uniform(3, 5))
 
     url = page.url
     log("URL: " + url)
@@ -111,121 +113,120 @@ def verify_login(page):
 
 
 def open_composer(page):
-    log("STEP 2/3: Open composer on home feed")
-    # Find and click composer trigger (What's on your mind?)
-    triggers = [
-        "div[role='button']:has-text(\"What's on your mind\")",
-        "div[role='button']:has-text('What\u2019s on your mind')",
-        "[aria-label*=\"What's on your mind\"]",
-        "div[role='textbox']",
-    ]
-    opened = False
-    for sel in triggers:
-        try:
-            btn = page.locator(sel).first
-            btn.wait_for(state="visible", timeout=8000)
-            btn.click()
-            time.sleep(random.uniform(2, 4))
-            opened = True
-            log("✅ Composer trigger clicked: " + sel)
-            break
-        except Exception:
-            continue
-    if not opened:
-        log("❌ Could not find composer trigger")
-        snapshot(page, "02_no_composer_trigger")
+    log("STEP 2/3: Navigate to mbasic composer")
+    try:
+        page.goto(MBASIC_COMPOSER, wait_until="domcontentloaded", timeout=60000)
+    except Exception as e:
+        log("❌ composer goto failed: " + str(e))
+        return False
+    time.sleep(random.uniform(2, 4))
+
+    url = page.url
+    log("Composer URL: " + url)
+
+    if "login" in url.lower():
+        log("❌ Composer redirected to login")
+        snapshot(page, "02_composer_login")
         return False
 
-    # Wait for the composer dialog
-    dialog_sels = [
-        "div[role='dialog']",
-        "[aria-label='Create post']",
-        "[aria-label='Create Post']",
+    # Check for the textarea
+    textarea_sels = [
+        "textarea[name='xc_message']",
+        "textarea[placeholder*=\"What's on your mind\"]",
+        "textarea",
     ]
-    for sel in dialog_sels:
+    for sel in textarea_sels:
         try:
-            page.locator(sel).first.wait_for(state="visible", timeout=8000)
-            log("✅ Composer dialog visible: " + sel)
+            ta = page.locator(sel).first
+            ta.wait_for(state="visible", timeout=8000)
+            log("✅ Composer textarea found: " + sel)
             return True
         except Exception:
             continue
-    log("⚠️  Composer dialog not detected, continuing anyway")
-    snapshot(page, "02_composer_state")
-    return True
+
+    log("❌ No textarea on composer page")
+    snapshot(page, "02_no_textarea")
+    return False
 
 
 def publish_post(page, text):
-    log("STEP 3/3: Type content and publish")
+    log("STEP 3/3: Type content and submit")
     if not text:
-        log("❌ No content to post (CONTENT secret empty)")
+        log("❌ No content")
         return False
 
-    # Find textbox inside dialog
-    textbox_sels = [
-        "div[role='dialog'] div[role='textbox']",
-        "div[role='dialog'] [contenteditable='true']",
-        "div[role='textbox'][contenteditable='true']",
+    # Fill the textarea
+    textarea_sels = [
+        "textarea[name='xc_message']",
+        "textarea[placeholder*=\"What's on your mind\"]",
+        "textarea",
     ]
-    typed = False
-    for sel in textbox_sels:
+    filled = False
+    for sel in textarea_sels:
         try:
-            tb = page.locator(sel).first
-            tb.wait_for(state="visible", timeout=8000)
-            tb.click()
-            time.sleep(1)
-            tb.type(text, delay=random.randint(20, 60))
-            time.sleep(random.uniform(1.5, 3))
-            typed = True
-            log("✅ Content typed (" + str(len(text)) + " chars) via " + sel)
+            ta = page.locator(sel).first
+            ta.wait_for(state="visible", timeout=5000)
+            ta.fill(text)
+            filled = True
+            log("✅ Content filled (" + str(len(text)) + " chars) via " + sel)
             break
         except Exception:
             continue
-    if not typed:
-        log("❌ Could not find textbox")
-        snapshot(page, "03_no_textbox")
+    if not filled:
+        log("❌ Could not fill textarea")
+        snapshot(page, "03_no_textarea_fill")
         return False
 
-    snapshot(page, "03_before_post")
+    time.sleep(random.uniform(1, 2))
+    snapshot(page, "03_before_submit")
 
-    # Click Post button
-    post_sels = [
-        "div[role='dialog'] div[role='button'][aria-label='Post']",
-        "div[aria-label='Post'][role='button']",
-        "div[role='dialog'] div[role='button']:has-text('Post')",
+    # Click submit (Post button)
+    submit_sels = [
+        "input[type='submit'][name='view_post']",
+        "input[type='submit'][value='Post']",
+        "input[type='submit']",
+        "button[type='submit']",
     ]
-    posted = False
-    for sel in post_sels:
+    submitted = False
+    for sel in submit_sels:
         try:
             btn = page.locator(sel).first
-            btn.wait_for(state="visible", timeout=8000)
+            btn.wait_for(state="visible", timeout=5000)
             btn.click()
-            posted = True
-            log("✅ Post button clicked: " + sel)
+            submitted = True
+            log("✅ Submit clicked: " + sel)
             break
         except Exception:
             continue
-    if not posted:
-        log("❌ Could not click Post button")
-        snapshot(page, "03_no_post_button")
+    if not submitted:
+        log("❌ Could not click submit")
+        snapshot(page, "03_no_submit")
         return False
 
-    # Wait for dialog to close (success indicator)
-    time.sleep(random.uniform(5, 8))
-    snapshot(page, "04_after_post")
+    # Wait for redirect back to home (success indicator)
+    time.sleep(random.uniform(4, 6))
+    snapshot(page, "04_after_submit")
 
-    try:
-        page.locator("div[role='dialog']").first.wait_for(
-            state="detached", timeout=15000)
-        log("✅ Composer closed — post published!")
-        return True
-    except Exception:
-        log("⚠️  Composer still open after post click. Check screenshot.")
+    final_url = page.url
+    log("Final URL: " + final_url)
+
+    if "composer" in final_url.lower():
+        log("⚠️  Still on composer page — post may have failed")
+        # Check for error messages
+        try:
+            body_text = page.locator("body").inner_text()[:500]
+            log("Page text: " + body_text.replace("\n", " | "))
+        except Exception:
+            pass
         return False
+
+    log("✅ Redirected away from composer — post published!")
+    return True
 
 
 def run():
     log("=" * 50)
-    log("poster.py v7.2 (cookies-only, desktop www)")
+    log("poster.py v7.3 (mbasic.facebook.com - bulletproof)")
     log("Account: #" + str(ACC_NUM) + " | force_all=" + str(FORCE_ALL))
     log("=" * 50)
 
@@ -243,7 +244,7 @@ def run():
     has_xs = any(c.get("name") == "xs" for c in cookies_raw)
     log("🔍 c_user present: " + str(has_c_user) + " | xs present: " + str(has_xs))
     if not has_c_user or not has_xs:
-        log("❌ Missing essential cookies (c_user or xs)")
+        log("❌ Missing essential cookies")
         return 1
 
     cookies = _normalize_cookies(cookies_raw)
@@ -251,7 +252,7 @@ def run():
 
     content = pick_content()
     if not content:
-        log("❌ No content to post — set CONTENT secret")
+        log("❌ No content — set CONTENT secret")
         return 1
     log("📝 Content preview: " + content[:80].replace("\n", " ") + ("..." if len(content) > 80 else ""))
 
@@ -266,8 +267,10 @@ def run():
         )
         try:
             context = browser.new_context(
-                user_agent=DESKTOP_UA,
-                viewport={"width": 1366, "height": 768},
+                user_agent=MBASIC_UA,
+                viewport={"width": 412, "height": 915},
+                is_mobile=True,
+                has_touch=True,
                 locale="en-US",
             )
             context.add_init_script(STEALTH_JS)

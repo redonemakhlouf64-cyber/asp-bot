@@ -129,8 +129,58 @@ def main():
 
         if not composer:
             snap(driver, "2_no_composer")
-            log.error("❌ Composer NOT found on home feed")
-            log.error("→ Check screenshot to see actual page")
+            log.error("❌ Composer NOT found with standard selectors")
+            log.error("🔍 Running deep DOM scan...")
+
+            # DIAGNOSTIC: scan all buttons/spans for likely composer text
+            try:
+                candidates = driver.execute_script("""
+                    const texts = ['on your mind', 'what', 'create post', 'create a post',
+                                   'share', 'write something', 'anything on',
+                                   'اكتب', 'شارك', 'بم تفكر', 'ماذا', 'انشر', 'ما الذي'];
+                    const results = [];
+                    const els = document.querySelectorAll('div[role="button"], button, [role="textbox"], textarea, [contenteditable="true"]');
+                    els.forEach((el, i) => {
+                        if (i > 200) return;
+                        const text = (el.textContent || '').trim().substring(0, 80);
+                        const aria = el.getAttribute('aria-label') || '';
+                        const placeholder = el.getAttribute('placeholder') || '';
+                        const combined = (text + ' ' + aria + ' ' + placeholder).toLowerCase();
+                        for (const t of texts) {
+                            if (combined.includes(t.toLowerCase())) {
+                                results.push({
+                                    tag: el.tagName + (el.getAttribute('role') ? '[' + el.getAttribute('role') + ']' : ''),
+                                    text: text,
+                                    aria: aria.substring(0, 60),
+                                    placeholder: placeholder.substring(0, 60),
+                                    visible: el.offsetParent !== null,
+                                });
+                                break;
+                            }
+                        }
+                    });
+                    return results.slice(0, 15);
+                """)
+                log.info(f"🔍 Found {len(candidates)} candidate elements:")
+                for i, c in enumerate(candidates):
+                    log.info(f"  [{i+1}] {c['tag']} visible={c['visible']}")
+                    if c.get('text'):
+                        log.info(f"       text: {c['text']}")
+                    if c.get('aria'):
+                        log.info(f"       aria-label: {c['aria']}")
+                    if c.get('placeholder'):
+                        log.info(f"       placeholder: {c['placeholder']}")
+            except Exception as e:
+                log.warning(f"DOM scan failed: {e}")
+
+            # Save HTML snippet for further debugging
+            try:
+                html = driver.page_source[:5000]
+                (SCREENSHOTS_DIR / "test_page_source.html").write_text(html, encoding="utf-8")
+                log.info("📄 Saved first 5000 chars of HTML")
+            except Exception as e:
+                log.warning(f"HTML save failed: {e}")
+
             sys.exit(1)
 
         log.info(f"✅ Found composer: {sel[:60]}")

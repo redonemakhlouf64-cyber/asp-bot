@@ -1,0 +1,36 @@
+# ==========================================
+# posting_templates.txt
+# Multiple post templates to avoid duplicate detection
+# Separator between templates: ---
+# Variables: {LINK} {PRODUCT} {NAME} {BENEFIT}
+# ==========================================
+
+Just discovered something that completely changed my business game. If you're serious about scaling, you need to see this: {LINK}
+---
+Quick question for fellow entrepreneurs: what's the ONE tool you can't live without? For me it's this: {LINK}
+---
+Been testing {PRODUCT} for 30 days. Results honestly surprised me. Here's what happened: {LINK}
+---
+Hot take: most business owners are missing out on {BENEFIT}. Here's how to fix it: {LINK}
+---
+Spent 6 months figuring this out so you don't have to. Full breakdown here: {LINK}
+---
+Stop scrolling. If you're a small business owner, this is worth 2 minutes of your time: {LINK}
+---
+Real talk - I wish someone showed me this when I started. Sharing so you don't make the same mistakes: {LINK}
+---
+The best {BENEFIT} strategy I've ever tested. Zero fluff, all actionable: {LINK}
+---
+Who else is trying to build a real online business in 2026? Check this out: {LINK}
+---
+From 0 to consistent results in 90 days. Here's the exact method: {LINK}
+---
+Looking for feedback from other entrepreneurs. What do you think of this approach? {LINK}
+---
+OK this is genuinely one of the best resources I've found this year. Free too: {LINK}
+---
+Tired of generic advice? This is different. Real strategies that actually work: {LINK}
+---
+Sharing this because it helped me and might help you too. No hype, just results: {LINK}
+---
+Ask me anything about {BENEFIT}. Also here's what I've been using: {LINK}

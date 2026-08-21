@@ -171,27 +171,128 @@ def verify_logged_in(driver, account_id: str) -> bool:
 # ===================================================================
 # POST TO GROUP
 # ===================================================================
-def _find_composer_trigger(driver):
-    """Click the 'Write something...' trigger to open the modal."""
+def _save_stage_screenshot(driver, account_id: str, group_url: str, stage: str) -> None:
+    """Save a screenshot named by account, group ID, and stage."""
+    try:
+        SCREENSHOTS_DIR.mkdir(exist_ok=True)
+        gid = group_url.rstrip("/").split("/")[-1][:14]
+        path = f"screenshots/{account_id}_{gid}_{stage}.png"
+        driver.save_screenshot(path)
+        log.info(f"[{account_id}] 📸 {stage}: {path}")
+    except Exception as e:
+        log.warning(f"[{account_id}] Screenshot failed ({stage}): {e}")
+
+
+def _try_join_group(driver, account_id: str) -> bool:
+    """
+    Click Join button if the account isn't a member yet.
+    Returns True if we just joined, False if already member / no button.
+    """
     for sel in [
-        "//div[@role='button' and (contains(., 'Write something') or contains(., 'Anything on your mind'))]",
-        "//span[contains(text(), 'Write something')]/ancestor::div[@role='button'][1]",
-        "//span[contains(text(), 'اكتب شيئا')]/ancestor::div[@role='button'][1]",
-        "//span[contains(text(), 'شارك أفكارك')]/ancestor::div[@role='button'][1]",
-        "div[aria-label*='Write something' i]",
-        "div[aria-label*='Create a post' i]",
+        "div[aria-label='Join Group']",
+        "div[aria-label='Join group']",
+        "//span[text()='Join Group']/ancestor::div[@role='button'][1]",
+        "//span[text()='Join group']/ancestor::div[@role='button'][1]",
+        "//span[text()='Join']/ancestor::div[@role='button'][1]",
+        "//span[contains(text(), 'انضم')]/ancestor::div[@role='button'][1]",
+        "//span[contains(text(), 'الانضمام')]/ancestor::div[@role='button'][1]",
+        "//span[contains(text(), 'Rejoindre')]/ancestor::div[@role='button'][1]",
     ]:
         try:
             by = By.XPATH if sel.startswith("//") else By.CSS_SELECTOR
-            btn = WebDriverWait(driver, 6).until(
+            btn = WebDriverWait(driver, 4).until(
                 EC.element_to_be_clickable((by, sel))
             )
             btn.click()
+            log.info(f"[{account_id}] ✅ Clicked Join button")
+            time.sleep(random.uniform(4, 7))
             return True
         except TimeoutException:
             continue
         except Exception:
             continue
+    return False
+
+
+def _find_composer_trigger(driver, account_id: str = "unknown"):
+    """
+    Try to open the composer. Returns True if we're now on a compose UI.
+    Tries many selectors + languages, falls back to direct textbox,
+    saves a debug screenshot if nothing works.
+    """
+    # Text-based XPaths (many languages)
+    trigger_xpaths = [
+        # English variants
+        "//div[@role='button'][.//span[contains(text(), 'on your mind')]]",
+        "//div[@role='button'][.//span[contains(text(), 'Write something')]]",
+        "//div[@role='button'][.//span[contains(text(), 'Anything on your mind')]]",
+        "//div[@role='button'][.//span[contains(text(), 'Create a post')]]",
+        "//div[@role='button'][.//span[contains(text(), 'Create post')]]",
+        # Arabic
+        "//div[@role='button'][.//span[contains(text(), 'اكتب')]]",
+        "//div[@role='button'][.//span[contains(text(), 'شارك')]]",
+        "//div[@role='button'][.//span[contains(text(), 'بم تفكر')]]",
+        "//div[@role='button'][.//span[contains(text(), 'ماذا يدور')]]",
+        "//div[@role='button'][.//span[contains(text(), 'انشر')]]",
+        # French
+        "//div[@role='button'][.//span[contains(text(), 'Exprimez-vous')]]",
+        "//div[@role='button'][.//span[contains(text(), 'Que voulez-vous')]]",
+        "//div[@role='button'][.//span[contains(text(), 'À quoi pensez-vous')]]",
+    ]
+    for xp in trigger_xpaths:
+        try:
+            btn = WebDriverWait(driver, 3).until(
+                EC.element_to_be_clickable((By.XPATH, xp))
+            )
+            btn.click()
+            time.sleep(1.5)
+            return True
+        except TimeoutException:
+            continue
+        except Exception:
+            continue
+
+    # Aria-label fallbacks
+    for css in [
+        "div[aria-label*='Write' i][role='button']",
+        "div[aria-label*='Create' i][role='button']",
+        "div[aria-label*='post' i][role='button']",
+    ]:
+        try:
+            btn = WebDriverWait(driver, 3).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, css))
+            )
+            btn.click()
+            time.sleep(1.5)
+            return True
+        except TimeoutException:
+            continue
+        except Exception:
+            continue
+
+    # Last fallback: composer might already be a direct visible textbox
+    try:
+        for el in driver.find_elements(By.CSS_SELECTOR, "div[contenteditable='true'][role='textbox']"):
+            try:
+                if el.is_displayed():
+                    el.click()
+                    time.sleep(1)
+                    return True
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    # Save DEBUG screenshot so we can see what's on screen
+    try:
+        SCREENSHOTS_DIR.mkdir(exist_ok=True)
+        gid = driver.current_url.rstrip("/").split("/")[-1][:12]
+        path = f"screenshots/{account_id}_no_composer_{gid}.png"
+        driver.save_screenshot(path)
+        log.info(f"[{account_id}] 📸 Debug screenshot saved: {path}")
+    except Exception as e:
+        log.warning(f"[{account_id}] Failed to save debug screenshot: {e}")
+
     return False
 
 
@@ -232,23 +333,46 @@ def _click_post_button(driver):
 
 
 def post_to_group(driver, group_url: str, text: str, account_id: str) -> bool:
+    """
+    Full flow per group:
+    1. Enter group
+    2. Handle CAPTCHA if real one appears
+    3. Try to Join (silent if already member)
+    4. Open composer
+    5. Type post
+    6. Click Post
+    7. Save final screenshot
+    """
     try:
         driver.get(group_url)
         human_sleep(4, 7)
 
+        # 2. CAPTCHA (real ones only)
         solver.auto_handle(driver, account_name=account_id)
 
-        if not _find_composer_trigger(driver):
+        # 3. Join if needed
+        joined_now = _try_join_group(driver, account_id)
+        if joined_now:
+            _save_stage_screenshot(driver, account_id, group_url, "1_joined")
+            human_sleep(6, 10)  # let join finalize
+
+        # 4. Open composer
+        if not _find_composer_trigger(driver, account_id):
             log.warning(f"[{account_id}] no_composer_trigger: {group_url}")
+            _save_stage_screenshot(driver, account_id, group_url, "fail_no_composer")
             return False
 
+        _save_stage_screenshot(driver, account_id, group_url, "2_composer_open")
         human_sleep(3, 5)
+
+        # 5. Find textarea
         textarea = _find_textarea(driver)
         if not textarea:
             log.warning(f"[{account_id}] no_textarea: {group_url}")
+            _save_stage_screenshot(driver, account_id, group_url, "fail_no_textarea")
             return False
 
-        # Type text like a human (character-by-character)
+        # 6. Type text like a human
         textarea.click()
         human_sleep(1, 2)
         for line in text.split("\n"):
@@ -257,18 +381,26 @@ def post_to_group(driver, group_url: str, text: str, account_id: str) -> bool:
                 time.sleep(random.uniform(0.02, 0.09))
             textarea.send_keys(Keys.SHIFT + Keys.ENTER)
 
+        _save_stage_screenshot(driver, account_id, group_url, "3_text_typed")
         human_sleep(2, 4)
 
+        # 7. Click Post
         if _click_post_button(driver):
             human_sleep(5, 8)
+            _save_stage_screenshot(driver, account_id, group_url, "4_posted")
             log.info(f"[{account_id}] ✅ Posted: {group_url}")
             return True
         else:
             log.warning(f"[{account_id}] no_post_btn: {group_url}")
+            _save_stage_screenshot(driver, account_id, group_url, "fail_no_post_btn")
             return False
 
     except WebDriverException as e:
         log.error(f"[{account_id}] Post error on {group_url}: {e}")
+        try:
+            _save_stage_screenshot(driver, account_id, group_url, "fail_exception")
+        except Exception:
+            pass
         return False
 
 

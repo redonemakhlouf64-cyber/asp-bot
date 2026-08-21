@@ -1,0 +1,65 @@
+# ==========================================
+# hashtags.txt
+# Random hashtags added to posts
+# Bot picks 3-5 randomly per post
+# ==========================================
+
+# --- Business & Entrepreneurship ---
+#entrepreneur
+#entrepreneurlife
+#smallbusiness
+#businessowner
+#startup
+#startupsuccess
+#founder
+#hustler
+#sidehustle
+#solopreneur
+
+# --- Digital Marketing ---
+#digitalmarketing
+#onlinemarketing
+#contentmarketing
+#socialmediamarketing
+#marketingtips
+#marketingstrategy
+#growthhacking
+#leadgeneration
+#seotips
+
+# --- Ecommerce ---
+#ecommerce
+#onlinestore
+#shopify
+#dropshipping
+#amazonfba
+#etsyshop
+#printondemand
+#ecommercebusiness
+
+# --- Money & Success ---
+#passiveincome
+#financialfreedom
+#makemoneyonline
+#workfromhome
+#buildyourempire
+#success
+#successmindset
+#wealthbuilding
+
+# --- Motivation ---
+#motivation
+#inspiration
+#mindset
+#growth
+#hustle
+#grind
+#nevergiveup
+#dreambig
+
+# --- Community ---
+#community
+#networking
+#collaboration
+#supportsmallbusiness
+#letsconnect

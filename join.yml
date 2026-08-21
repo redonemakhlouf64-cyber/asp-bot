@@ -1,0 +1,69 @@
+name: Auto Joiner
+
+on:
+  # ⏰ جدولة تلقائية يوميًا: 10:00 UTC = 11:00 صباحًا (المغرب)
+  schedule:
+    - cron: '0 10 * * *'
+  workflow_dispatch:
+    inputs:
+      account_num:
+        description: 'Account number'
+        type: string
+        default: '1'
+      batch_size:
+        description: 'Joins per batch (30 = ~1 hour)'
+        type: string
+        default: '30'
+      batches:
+        description: 'Number of batches (2 = 60 joins/day)'
+        type: string
+        default: '2'
+
+permissions:
+  contents: write
+
+jobs:
+  join:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 240  # 4 ساعات: دفعتين × ساعة + استراحات
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright==1.47.0
+          playwright install --with-deps chromium || playwright install chromium
+
+      - name: Run joiner
+        env:
+          ACCOUNT_NUM: ${{ inputs.account_num }}
+          BATCH_SIZE: ${{ inputs.batch_size }}
+          BATCHES: ${{ inputs.batches }}
+          JOIN_DELAY_MIN: '100'
+          JOIN_DELAY_MAX: '140'
+          BATCH_PAUSE_MIN: '1800'
+          BATCH_PAUSE_MAX: '2400'
+          FB_COOKIES_1: ${{ secrets.FB_COOKIES_1 }}
+        run: python joiner.py
+
+      - name: Commit new groups
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add groups.txt joined_history.txt 2>/dev/null || true
+          if git diff --cached --quiet 2>/dev/null; then
+            echo "No changes"
+          else
+            git commit -m "Auto: joined new groups [skip ci]"
+            git push
+          fi

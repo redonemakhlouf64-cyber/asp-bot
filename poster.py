@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-poster.py v8.1 — mbasic edition (asp-bot compatible)
+poster.py v8.2 — mbasic edition (asp-bot compatible)
 - يقرأ groups.txt من جذر المستودع
-- يستخدم home.php للنشر على الحائط (أكثر استقراراً)
+- يستخدم composer/?target_id لتجنّب إعادة توجيه الجروبات
+- يكتشف إعادة التوجيه إلى www ويعالجه
 - selectors احتياطية متعددة
 """
 
@@ -151,21 +152,51 @@ def post_to_wall(page):
 
 def post_to_group(page, group_id):
     log(f"👥 Posting to group {group_id}...")
-    page.goto(f"{MBASIC}/groups/{group_id}", timeout=30000, wait_until="domcontentloaded")
 
-    # اضغط على 'Write something' بلغات متعددة
-    link = (page.query_selector("a:has-text('Write')")
-            or page.query_selector("a:has-text('Écrire')")
-            or page.query_selector("a:has-text('اكتب')")
-            or page.query_selector("a[href*='composer']"))
-    if link:
-        link.click()
-        page.wait_for_load_state("domcontentloaded", timeout=30000)
+    # جرّب 3 URLs مختلفة لتجنّب إعادة التوجيه إلى www
+    urls_to_try = [
+        f"{MBASIC}/composer/?target_id={group_id}",   # ⭐ أفضل طريقة
+        f"{MBASIC}/groups/{group_id}?view=permalink",
+        f"{MBASIC}/groups/{group_id}",
+    ]
 
-    textarea = find_composer_textarea(page)
+    textarea = None
+    for url in urls_to_try:
+        log(f"  → Trying {url}")
+        page.goto(url, timeout=30000, wait_until="domcontentloaded")
+
+        # تحقّق إذا تمّ إعادة التوجيه
+        current = page.url
+        if "www.facebook.com" in current or "m.facebook.com" in current and "mbasic" not in current:
+            log(f"  ⚠️ Redirected to {current} — forcing back to mbasic")
+            # أعد المحاولة مع header يجبر mbasic
+            page.set_extra_http_headers({"X-Requested-With": "XMLHttpRequest"})
+            page.goto(url, timeout=30000, wait_until="domcontentloaded")
+
+        textarea = find_composer_textarea(page)
+        if textarea:
+            log(f"  ✅ textarea found at {url}")
+            break
+
+        # جرّب الضغط على 'Write something'
+        link = (page.query_selector("a[href*='composer'][href*='target_id']")
+                or page.query_selector("a:has-text('Write')")
+                or page.query_selector("a:has-text('Écrire')")
+                or page.query_selector("a:has-text('اكتب')"))
+        if link:
+            log("  → Clicking composer link...")
+            link.click()
+            page.wait_for_load_state("domcontentloaded", timeout=30000)
+            textarea = find_composer_textarea(page)
+            if textarea:
+                break
+
     if not textarea:
         log(f"❌ No textarea in group {group_id}")
         page.screenshot(path=f"debug_group_{group_id}_fail.png")
+        # اطبع HTML للتشخيص (لأول جروب فقط لتجنّب إغراق اللوج)
+        log(f"Final URL: {page.url}")
+        log(f"HTML preview (first 2000 chars):\n{page.content()[:2000]}")
         return False
 
     textarea.fill(CONTENT)

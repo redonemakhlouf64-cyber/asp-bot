@@ -201,22 +201,57 @@ def publish_post(page, text):
     snapshot(page, "03_after_fill")
 
     # Try to find submit button
+    # Log what buttons exist on page (for debugging)
+    try:
+        n_btn = page.locator("button").count()
+        log("🔎 Buttons on page: " + str(n_btn))
+        for i in range(min(n_btn, 5)):
+            b = page.locator("button").nth(i)
+            try:
+                txt = (b.inner_text(timeout=1500) or "").strip()[:40]
+            except Exception:
+                txt = ""
+            try:
+                aria = b.get_attribute("aria-label") or ""
+            except Exception:
+                aria = ""
+            try:
+                btype = b.get_attribute("type") or ""
+            except Exception:
+                btype = ""
+            log("  btn[" + str(i) + "]: text='" + txt + "' aria='" + aria[:40] + "' type='" + btype + "'")
+    except Exception as e:
+        log("button enum error: " + str(e))
+
     submit_sels = [
         "button[name='view_post']",
         "input[name='view_post']",
         "button[type='submit']",
         "input[type='submit']",
         "button:has-text('Post')",
-        "[aria-label='Post'][role='button']",
+        "button:has-text('Publish')",
+        "button:has-text('Share')",
+        "[aria-label='Post']",
+        "[aria-label*='Post']",
+        "[aria-label*='Publish']",
+        "[aria-label*='Share']",
         "[data-sigil*='composer-submit']",
         "a:has-text('Post')",
+        "button",  # last resort: only 1 button on composer page
     ]
 
     submitted = False
     for sel in submit_sels:
         try:
             btn = page.locator(sel).first
-            btn.wait_for(state="visible", timeout=5000)
+            btn.wait_for(state="visible", timeout=4000)
+            # Ensure button is enabled/clickable
+            try:
+                if btn.is_disabled(timeout=1000):
+                    log("⚠️  " + sel + " is disabled, skipping")
+                    continue
+            except Exception:
+                pass
             btn.click()
             submitted = True
             log("✅ Submit clicked: " + sel)
@@ -251,7 +286,7 @@ def publish_post(page, text):
 
 def run():
     log("=" * 50)
-    log("poster.py v7.4 (m.facebook.com smart mtouch)")
+    log("poster.py v7.5 (submit fallback + button enum)")
     log("Account: #" + str(ACC_NUM) + " | force_all=" + str(FORCE_ALL))
     log("=" * 50)
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-poster.py - Facebook Auto Poster v6.6
-Uses saved cookies to post to Facebook without login.
+poster.py - Facebook Auto Poster v7.0
+Cookies-only. No email, no password, no proxy.
 """
 
 import os
@@ -9,8 +9,7 @@ import json
 import time
 import random
 import sys
-from urllib.parse import urlparse
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 
 def log(msg):
@@ -18,13 +17,9 @@ def log(msg):
 
 
 def _normalize_cookies(cookies):
-    """Convert browser cookies (Firefox/Chrome) to Playwright format."""
-    ss_map = {
-        "lax": "Lax",
-        "strict": "Strict",
-        "none": "None",
-        "no_restriction": "None",
-    }
+    """Convert browser cookies (Firefox/Chrome export) to Playwright format."""
+    ss_map = {"lax": "Lax", "strict": "Strict",
+              "none": "None", "no_restriction": "None"}
     allowed = {"name", "value", "domain", "path", "expires",
                "httpOnly", "secure", "sameSite"}
     out = []
@@ -34,38 +29,20 @@ def _normalize_cookies(cookies):
             if k == "expirationDate":
                 nc["expires"] = float(v) if v is not None else -1
             elif k == "sameSite":
-                if v is None or v == "":
-                    nc["sameSite"] = "Lax"
-                else:
-                    nc["sameSite"] = ss_map.get(str(v).lower(), "Lax")
+                nc["sameSite"] = ss_map.get(str(v).lower(), "Lax") if v else "Lax"
             elif k in allowed:
                 nc[k] = v
-        if "sameSite" not in nc:
-            nc["sameSite"] = "Lax"
+        nc.setdefault("sameSite", "Lax")
+        nc.setdefault("path", "/")
         if "domain" not in nc:
             continue
-        if "path" not in nc:
-            nc["path"] = "/"
         out.append(nc)
     return out
 
 
-def parse_proxy(url):
-    """Parse PROXY_URL into Playwright proxy config."""
-    if not url:
-        return None
-    p = urlparse(url)
-    cfg = {"server": f"{p.scheme}://{p.hostname}:{p.port}"}
-    if p.username:
-        cfg["username"] = p.username
-    if p.password:
-        cfg["password"] = p.password
-    return cfg
-
-
+# --- Config (cookies-only) ---
 ACC_NUM = int(os.environ.get("ACCOUNT_NUM", "1"))
 FORCE_ALL = os.environ.get("FORCE_ALL", "false").lower() == "true"
-PROXY_URL = os.environ.get("PROXY_URL", "").strip()
 CONTENT_RAW = os.environ.get("CONTENT", "").strip()
 FB_COOKIES = os.environ.get(f"FB_COOKIES_{ACC_NUM}", "").strip()
 
@@ -94,100 +71,132 @@ def get_content():
     return "Check out my latest eBooks collection! 📚✨"
 
 
-def post_to_profile(page):
-    log("Navigating to FB home...")
-    page.goto("https://www.facebook.com/",
-              wait_until="domcontentloaded", timeout=60000)
-    time.sleep(random.uniform(4, 7))
+def snapshot(page, label):
+    """Save screenshot + HTML for debugging."""
+    try:
+        page.screenshot(path=f"debug_{label}.png", full_page=True)
+        log(f"📸 Saved screenshot: debug_{label}.png")
+    except Exception as e:
+        log(f"screenshot fail: {e}")
+    try:
+        html = page.content()[:2000]
+        log(f"📄 HTML head [{label}]: {html[:500]}")
+    except Exception:
+        pass
 
-    current_url = page.url
-    log(f"Current URL: {current_url}")
-    if "login" in current_url or "checkpoint" in current_url:
-        log("NOT logged in - cookies invalid or expired")
+
+def verify_login(page):
+    """Step 1: Verify cookies actually logged us in."""
+    log("STEP 1/3: Verify session with cookies")
+    try:
+        page.goto("https://www.facebook.com/",
+                  wait_until="domcontentloaded", timeout=60000)
+    except Exception as e:
+        log(f"❌ goto failed: {e}")
+        return False
+    time.sleep(random.uniform(4, 6))
+
+    url = page.url
+    title = page.title()
+    log(f"URL: {url}")
+    log(f"Title: {title}")
+
+    if "login" in url.lower() or "checkpoint" in url.lower():
+        log("❌ Redirected to login/checkpoint → cookies invalid")
+        snapshot(page, "01_login_redirect")
         return False
 
-    log("Opening compose box...")
-    compose_selectors = [
+    cookies_now = page.context.cookies()
+    c_user = next((c for c in cookies_now if c.get("name") == "c_user"), None)
+    if not c_user:
+        log("❌ Missing c_user cookie after navigation")
+        snapshot(page, "01_no_cuser")
+        return False
+
+    log(f"✅ Logged in as user id: {c_user.get('value')}")
+    return True
+
+
+def open_composer(page):
+    """Step 2: Open 'What's on your mind' composer."""
+    log("STEP 2/3: Open composer")
+    composer_selectors = [
         'span:has-text("What\'s on your mind")',
+        'span:has-text("What\'s on your mind, ")',
         'div[role="button"]:has-text("What\'s on your mind")',
         '[aria-label*="Create a post"]',
+        '[aria-label*="What\'s on your mind"]',
     ]
-    opened = False
-    for sel in compose_selectors:
+    for sel in composer_selectors:
         try:
             page.locator(sel).first.click(timeout=8000)
-            opened = True
-            log(f"Compose opened with: {sel}")
-            break
+            log(f"✅ Composer opened: {sel}")
+            time.sleep(random.uniform(2, 4))
+            return True
         except Exception:
             continue
-    if not opened:
-        log("Could not open compose box")
-        return False
 
-    time.sleep(random.uniform(2, 4))
+    log("❌ Could not open composer with any selector")
+    snapshot(page, "02_no_composer")
+    return False
 
+
+def publish_post(page):
+    """Step 3: Type text and click Post."""
+    log("STEP 3/3: Type content and publish")
     text = get_content()
     log(f"Content: {text[:100]}")
+
     try:
         editor = page.locator(
             'div[contenteditable="true"][role="textbox"]').first
         editor.click(timeout=10000)
         time.sleep(1)
         editor.type(text, delay=random.randint(30, 80))
+        log("✅ Typed content into editor")
     except Exception as e:
-        log(f"Type failed: {e}")
+        log(f"❌ Type failed: {e}")
+        snapshot(page, "03_type_fail")
         return False
 
     time.sleep(random.uniform(3, 5))
 
-    log("Clicking Post button...")
-    post_selectors = [
+    for sel in [
         'div[aria-label="Post"][role="button"]',
         'div[aria-label="Post"]',
         'button:has-text("Post")',
-    ]
-    posted = False
-    for sel in post_selectors:
+    ]:
         try:
             page.locator(sel).first.click(timeout=8000)
-            posted = True
-            log(f"Post clicked with: {sel}")
-            break
+            log(f"✅ Clicked Post button: {sel}")
+            time.sleep(random.uniform(6, 10))
+            log("🎉 Post submitted")
+            return True
         except Exception:
             continue
-    if not posted:
-        log("Could not click Post button")
-        return False
 
-    log("Waiting for post to submit...")
-    time.sleep(random.uniform(6, 10))
-    log("Post submitted successfully")
-    return True
+    log("❌ Could not click Post button")
+    snapshot(page, "03_no_post_btn")
+    return False
 
 
 def main():
-    log("=== poster.py v6.6 START ===")
-    log(f"Account: #{ACC_NUM}, Force: {FORCE_ALL}")
+    log("=" * 50)
+    log(f"poster.py v7.0 (cookies-only) START | Acc #{ACC_NUM}")
+    log("=" * 50)
 
     if not FB_COOKIES:
-        log(f"No FB_COOKIES_{ACC_NUM} secret found. Skipping.")
-        return 0
+        log(f"❌ FB_COOKIES_{ACC_NUM} secret is empty. Nothing to do.")
+        return 1
 
     try:
         cookies_raw = json.loads(FB_COOKIES)
     except Exception as e:
-        log(f"FB_COOKIES_{ACC_NUM} invalid JSON: {e}")
+        log(f"❌ FB_COOKIES_{ACC_NUM} invalid JSON: {e}")
         return 1
 
     cookies = _normalize_cookies(cookies_raw)
-    log(f"Loaded {len(cookies)} cookies (normalized)")
-
-    proxy_cfg = parse_proxy(PROXY_URL)
-    if proxy_cfg:
-        log(f"Using proxy: {proxy_cfg['server']}")
-    else:
-        log("WARNING: No proxy configured")
+    log(f"🍪 Loaded {len(cookies)} cookies")
 
     success = False
     with sync_playwright() as p:
@@ -196,38 +205,39 @@ def main():
             args=[
                 "--disable-blink-features=AutomationControlled",
                 "--no-sandbox",
+                "--disable-dev-shm-usage",
             ],
         )
         try:
-            ctx_args = {
-                "user_agent": DESKTOP_UA,
-                "viewport": {"width": 1366, "height": 768},
-                "locale": "en-US",
-            }
-            if proxy_cfg:
-                ctx_args["proxy"] = proxy_cfg
-            context = browser.new_context(**ctx_args)
+            context = browser.new_context(
+                user_agent=DESKTOP_UA,
+                viewport={"width": 1366, "height": 768},
+                locale="en-US",
+            )
             context.add_init_script(STEALTH_JS)
             context.add_cookies(cookies)
             page = context.new_page()
 
-            try:
-                success = post_to_profile(page)
-            except Exception as e:
-                log(f"Post error: {e}")
-                success = False
+            if not verify_login(page):
+                return 1
+            if not open_composer(page):
+                return 1
+            if not publish_post(page):
+                return 1
 
-            if not success:
-                try:
-                    page.screenshot(
-                        path=f"failure_acc{ACC_NUM}.png", full_page=True)
-                    log(f"Screenshot saved: failure_acc{ACC_NUM}.png")
-                except Exception:
-                    pass
+            success = True
+        except Exception as e:
+            log(f"❌ Fatal error: {e}")
+            try:
+                snapshot(page, "99_fatal")
+            except Exception:
+                pass
         finally:
             browser.close()
 
-    log(f"=== poster.py v6.6 END - {'OK' if success else 'FAIL'} ===")
+    log("=" * 50)
+    log(f"poster.py END | {'✅ SUCCESS' if success else '❌ FAILURE'}")
+    log("=" * 50)
     return 0 if success else 1
 
 

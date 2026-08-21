@@ -23,33 +23,16 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y tesseract-ocr ffmpeg unzip
+          sudo apt-get install -y tesseract-ocr ffmpeg
 
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Restore cookies from secret
-        env:
-          B64: ${{ secrets.COOKIES_ZIP_B64 }}
+      - name: Check cookies
         run: |
-          set -e
-          mkdir -p cookies
-          # Strip ALL whitespace (spaces, tabs, newlines, CR) before decoding
-          printf '%s' "$B64" | tr -d '[:space:]' | base64 -d > cookies.zip
-          echo "Decoded file info:"
-          file cookies.zip
-          ls -lh cookies.zip
-          # Verify it's a real zip before unzipping
-          if ! unzip -tq cookies.zip; then
-            echo "❌ ERROR: COOKIES_ZIP_B64 secret is not a valid base64-encoded zip"
-            echo "Fix: re-generate base64 and update the secret (see cookies-secret page)"
-            exit 1
-          fi
-          unzip -o cookies.zip -d .
-          rm cookies.zip
-          echo "Cookies files:"
+          echo "Cookies found:"
           ls -lh cookies/
 
       - name: Run joiner
@@ -61,5 +44,5 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add state/ || true
-          git diff --cached --quiet || git commit -m "chore: update join state [skip ci]"
+          git diff --cached --quiet || git commit -m "chore: update state [skip ci]"
           git push || true

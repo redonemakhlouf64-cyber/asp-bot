@@ -1,19 +1,27 @@
 name: Group Discovery
 
 on:
-  schedule:
-    - cron: '0 4 * * *'
   workflow_dispatch:
+    inputs:
+      account_num:
+        description: 'Account number (matches FB_COOKIES_N secret)'
+        type: string
+        default: '1'
+      max_per_keyword:
+        description: 'Max groups per keyword'
+        type: string
+        default: '20'
 
 jobs:
   discover:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GH_PAT }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -22,20 +30,36 @@ jobs:
 
       - name: Install deps
         run: |
-          pip install -r requirements.txt
-          playwright install chromium
-          playwright install-deps chromium
+          python -m pip install --upgrade pip
+          pip install playwright
+          python -m playwright install chromium
 
-      - name: Run discovery
+      - name: Run discover
         env:
-          FB_COOKIES: ${{ secrets.FB_COOKIES_1 }}
+          ACCOUNT_NUM: ${{ inputs.account_num }}
+          MAX_PER_KEYWORD: ${{ inputs.max_per_keyword }}
+          FB_COOKIES_1: ${{ secrets.FB_COOKIES_1 }}
+          KEYWORDS: ${{ secrets.KEYWORDS }}
         run: python discover.py
 
       - name: Commit groups.txt
+        if: success()
         run: |
-          git config user.name "asp-bot"
-          git config user.email "bot@asp.local"
-          git pull --rebase origin main || true
-          git add groups.txt state/ || true
-          git diff --staged --quiet || git commit -m "Update discovered groups"
-          git push || true
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -f groups.txt ]; then
+            git add groups.txt
+            git diff --cached --quiet || git commit -m "chore: update groups.txt [skip ci]"
+            git push || true
+          fi
+
+      - name: Upload debug artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: discover-debug
+          path: |
+            discover_*.png
+            groups.txt
+          if-no-files-found: ignore
+          retention-days: 7

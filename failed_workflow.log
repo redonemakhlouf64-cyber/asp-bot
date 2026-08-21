@@ -1,1 +1,18 @@
-failed to get run: HTTP 404: Not Found (https://api.github.com/repos/redonemakhlouf64-cyber/asp-bot/actions/runs/?exclude_pull_requests=true)
+post	Check cookies & post text	﻿2026-08-21T18:25:15.2728649Z ##[group]Run echo "Cookies:" && ls -lh cookies/
+post	Check cookies & post text	2026-08-21T18:25:15.2729306Z ^[[36;1mecho "Cookies:" && ls -lh cookies/^[[0m
+post	Check cookies & post text	2026-08-21T18:25:15.2729818Z ^[[36;1mecho "Post text:" && cat post.txt^[[0m
+post	Check cookies & post text	2026-08-21T18:25:15.2780015Z shell: /usr/bin/bash -e {0}
+post	Check cookies & post text	2026-08-21T18:25:15.2780275Z env:
+post	Check cookies & post text	2026-08-21T18:25:15.2780547Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.16/x64
+post	Check cookies & post text	2026-08-21T18:25:15.2781013Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.16/x64/lib/pkgconfig
+post	Check cookies & post text	2026-08-21T18:25:15.2781485Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.16/x64
+post	Check cookies & post text	2026-08-21T18:25:15.2781870Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.16/x64
+post	Check cookies & post text	2026-08-21T18:25:15.2782255Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.16/x64
+post	Check cookies & post text	2026-08-21T18:25:15.2782636Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.16/x64/lib
+post	Check cookies & post text	2026-08-21T18:25:15.2782958Z ##[endgroup]
+post	Check cookies & post text	2026-08-21T18:25:15.2841849Z Cookies:
+post	Check cookies & post text	2026-08-21T18:25:15.2856816Z total 8.0K
+post	Check cookies & post text	2026-08-21T18:25:15.2857328Z -rw-r--r-- 1 runner runner 4.1K Aug 21 18:24 account_01.json
+post	Check cookies & post text	2026-08-21T18:25:15.2858888Z Post text:
+post	Check cookies & post text	2026-08-21T18:25:15.2869047Z cat: post.txt: No such file or directory
+post	Check cookies & post text	2026-08-21T18:25:15.2883983Z ##[error]Process completed with exit code 1.

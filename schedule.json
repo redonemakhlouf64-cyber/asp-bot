@@ -1,0 +1,53 @@
+{
+  "timezone": "America/New_York",
+  "active_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+  "rest_days": ["Sunday"],
+
+  "joining": {
+    "enabled": true,
+    "active_hours": [9, 10, 11, 13, 14, 15, 17, 18, 19, 20],
+    "max_joins_per_hour": 4,
+    "max_joins_per_day": 25,
+    "delay_between_joins_seconds": {
+      "min": 180,
+      "max": 420
+    },
+    "pause_after_joins": 10,
+    "pause_duration_minutes": 30
+  },
+
+  "posting": {
+    "enabled": true,
+    "active_hours": [10, 13, 16, 19, 21],
+    "max_posts_per_hour": 2,
+    "max_posts_per_day": 8,
+    "delay_between_posts_seconds": {
+      "min": 900,
+      "max": 1800
+    },
+    "skip_weekends": false
+  },
+
+  "human_behavior": {
+    "random_scroll_before_action": true,
+    "random_page_visit_probability": 0.3,
+    "typing_speed_wpm": {
+      "min": 35,
+      "max": 65
+    },
+    "mouse_movement": true,
+    "take_breaks": true,
+    "break_frequency_hours": 2,
+    "break_duration_minutes": {
+      "min": 15,
+      "max": 45
+    }
+  },
+
+  "safety": {
+    "stop_on_captcha": true,
+    "stop_on_checkpoint": true,
+    "max_errors_before_stop": 5,
+    "cool_down_hours_after_error": 2
+  }
+}

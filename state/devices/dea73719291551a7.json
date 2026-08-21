@@ -1,0 +1,21 @@
+{
+  "name": "iPad Pro - Safari",
+  "platform": "iPad",
+  "user_agent": "Mozilla/5.0 (iPad; CPU OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
+  "viewport": [
+    1024,
+    1366
+  ],
+  "device_scale": 2,
+  "mobile": true,
+  "touch": true,
+  "languages": [
+    "en-US",
+    "en"
+  ],
+  "timezone": "America/New_York",
+  "webgl_vendor": "Apple Inc.",
+  "webgl_renderer": "Apple GPU",
+  "hardware_concurrency": 8,
+  "device_memory": 8
+}

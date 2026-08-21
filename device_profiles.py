@@ -204,19 +204,12 @@ class DeviceProfileManager:
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 
     def _get_profile_file(self, account_id: str) -> Path:
-        """Path to the account's device profile file."""
-        # Hash the account_id so filenames are safe
         safe_id = hashlib.md5(account_id.encode()).hexdigest()[:16]
         return self.storage_dir / f"{safe_id}.json"
 
     def get_profile(self, account_id: str) -> dict:
-        """
-        Get or create device profile for this account.
-        Same account = same device profile FOREVER.
-        """
         profile_file = self._get_profile_file(account_id)
 
-        # Load existing profile
         if profile_file.exists():
             try:
                 with open(profile_file, "r", encoding="utf-8") as f:
@@ -226,12 +219,9 @@ class DeviceProfileManager:
             except Exception as e:
                 log.warning(f"Failed to load profile: {e}")
 
-        # Create new profile using deterministic hash
-        # (same account -> same profile even if file deleted)
         hash_int = int(hashlib.md5(account_id.encode()).hexdigest(), 16)
         profile = DEVICE_PROFILES[hash_int % len(DEVICE_PROFILES)].copy()
 
-        # Save it
         with open(profile_file, "w", encoding="utf-8") as f:
             json.dump(profile, f, indent=2)
 
@@ -239,7 +229,6 @@ class DeviceProfileManager:
         return profile
 
     def list_profiles(self) -> None:
-        """Print all saved profiles."""
         for f in self.storage_dir.glob("*.json"):
             try:
                 with open(f, "r") as file:
@@ -249,7 +238,6 @@ class DeviceProfileManager:
                 pass
 
     def reset_profile(self, account_id: str) -> None:
-        """Delete the profile so a new one is assigned next time."""
         f = self._get_profile_file(account_id)
         if f.exists():
             f.unlink()
@@ -264,30 +252,21 @@ def create_driver_with_profile(
     headless: bool = True,
     session_dir: Optional[str] = None,
 ) -> webdriver.Chrome:
-    """
-    Build a Chrome driver that emulates the given device profile.
-    Facebook will see the browser as this specific device.
-    """
     options = Options()
 
-    # Basic stealth
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option("useAutomationExtension", False)
 
-    # Common flags
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-notifications")
 
-    # Device-specific: user agent
     options.add_argument(f"--user-agent={profile['user_agent']}")
 
-    # Device-specific: viewport
     w, h = profile["viewport"]
     options.add_argument(f"--window-size={w},{h}")
 
-    # Language
     lang_str = ",".join(profile["languages"])
     options.add_argument(f"--lang={profile['languages'][0]}")
     options.add_experimental_option("prefs", {
@@ -295,7 +274,6 @@ def create_driver_with_profile(
         "profile.default_content_setting_values.notifications": 2,
     })
 
-    # Mobile emulation (for phone/tablet profiles)
     if profile["mobile"]:
         mobile_emulation = {
             "deviceMetrics": {
@@ -311,17 +289,14 @@ def create_driver_with_profile(
     if headless:
         options.add_argument("--headless=new")
 
-    # Session persistence (per account)
     if session_dir:
         Path(session_dir).mkdir(parents=True, exist_ok=True)
         options.add_argument(f"--user-data-dir={os.path.abspath(session_dir)}")
 
     driver = webdriver.Chrome(options=options)
 
-    # Inject device fingerprint
     _inject_fingerprint(driver, profile)
 
-    # Set timezone via CDP
     try:
         driver.execute_cdp_cmd(
             "Emulation.setTimezoneOverride",
@@ -335,38 +310,16 @@ def create_driver_with_profile(
 
 
 def _inject_fingerprint(driver, profile: dict) -> None:
-    """Inject JS to make navigator.* match the device profile."""
     lang_json = json.dumps(profile["languages"])
 
     script = f"""
-    // Hide webdriver
     Object.defineProperty(navigator, 'webdriver', {{ get: () => undefined }});
+    Object.defineProperty(navigator, 'platform', {{ get: () => '{profile["platform"]}' }});
+    Object.defineProperty(navigator, 'languages', {{ get: () => {lang_json} }});
+    Object.defineProperty(navigator, 'hardwareConcurrency', {{ get: () => {profile["hardware_concurrency"]} }});
+    Object.defineProperty(navigator, 'deviceMemory', {{ get: () => {profile["device_memory"]} }});
+    Object.defineProperty(navigator, 'maxTouchPoints', {{ get: () => {5 if profile["touch"] else 0} }});
 
-    // Platform
-    Object.defineProperty(navigator, 'platform', {{
-        get: () => '{profile["platform"]}'
-    }});
-
-    // Languages
-    Object.defineProperty(navigator, 'languages', {{
-        get: () => {lang_json}
-    }});
-
-    // Hardware
-    Object.defineProperty(navigator, 'hardwareConcurrency', {{
-        get: () => {profile["hardware_concurrency"]}
-    }});
-
-    Object.defineProperty(navigator, 'deviceMemory', {{
-        get: () => {profile["device_memory"]}
-    }});
-
-    // Touch support
-    Object.defineProperty(navigator, 'maxTouchPoints', {{
-        get: () => {5 if profile["touch"] else 0}
-    }});
-
-    // WebGL fingerprint
     const getParameter = WebGLRenderingContext.prototype.getParameter;
     WebGLRenderingContext.prototype.getParameter = function(parameter) {{
         if (parameter === 37445) return '{profile["webgl_vendor"]}';
@@ -374,7 +327,6 @@ def _inject_fingerprint(driver, profile: dict) -> None:
         return getParameter.call(this, parameter);
     }};
 
-    // Fake chrome runtime
     window.chrome = {{ runtime: {{}} }};
     """
 
@@ -387,37 +339,21 @@ def _inject_fingerprint(driver, profile: dict) -> None:
         log.warning(f"Fingerprint injection: {e}")
 
 
-# ===================================================================
-# HELPER: Quick driver for account
-# ===================================================================
 def get_driver_for_account(
     account_id: str,
     headless: bool = True,
     session_base: str = "state/sessions",
 ) -> webdriver.Chrome:
-    """
-    One-line helper: get a ready driver for the given account,
-    with its assigned device profile and session persistence.
-    """
     manager = DeviceProfileManager()
     profile = manager.get_profile(account_id)
     session_dir = f"{session_base}/{account_id}"
     return create_driver_with_profile(profile, headless, session_dir)
 
 
-# ===================================================================
-# TEST
-# ===================================================================
 if __name__ == "__main__":
     manager = DeviceProfileManager()
-
-    # Simulate 5 different accounts
     test_accounts = ["john_2025", "sarah_marketing", "mike_biz", "lisa_ecom", "tom_agency"]
-
     print("\n=== Device assignments ===")
     for acc in test_accounts:
         p = manager.get_profile(acc)
         print(f"  {acc:20s} -> {p['name']}")
-
-    print("\n=== Saved profiles ===")
-    manager.list_profiles()

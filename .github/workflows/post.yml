@@ -3,24 +3,19 @@ name: Auto Poster
 on:
   workflow_dispatch:
     inputs:
+      account_num:
+        description: 'Account number (matches FB_COOKIES_N secret)'
+        type: string
+        default: '1'
       force_all:
-        description: "Force posting even if already posted"
-        required: false
-        default: "true"
-        type: choice
-        options:
-          - "true"
-          - "false"
+        description: 'Force post even if recently posted'
+        type: boolean
+        default: false
 
 jobs:
   post:
     runs-on: ubuntu-latest
-    continue-on-error: true
-
-    strategy:
-      fail-fast: false
-      matrix:
-        acc_num: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -29,77 +24,28 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          fi
+          pip install playwright
           python -m playwright install chromium
 
       - name: Run poster
         env:
-          GH_PAT: ${{ secrets.GH_PAT }}
-          FB_ACCOUNTS: ${{ secrets.FB_ACCOUNTS }}
-
-          FB_COOKIES: ${{ secrets.FB_COOKIES_1 }}
-          FB_COOKIES_1: ${{ secrets.FB_COOKIES_1 }}
-          FB_COOKIES_2: ${{ secrets.FB_COOKIES_2 }}
-          FB_COOKIES_3: ${{ secrets.FB_COOKIES_3 }}
-          FB_COOKIES_4: ${{ secrets.FB_COOKIES_4 }}
-          FB_COOKIES_5: ${{ secrets.FB_COOKIES_5 }}
-          FB_COOKIES_6: ${{ secrets.FB_COOKIES_6 }}
-          FB_COOKIES_7: ${{ secrets.FB_COOKIES_7 }}
-          FB_COOKIES_8: ${{ secrets.FB_COOKIES_8 }}
-          FB_COOKIES_9: ${{ secrets.FB_COOKIES_9 }}
-          FB_COOKIES_10: ${{ secrets.FB_COOKIES_10 }}
-          FB_COOKIES_11: ${{ secrets.FB_COOKIES_11 }}
-          FB_COOKIES_12: ${{ secrets.FB_COOKIES_12 }}
-          FB_COOKIES_13: ${{ secrets.FB_COOKIES_13 }}
-          FB_COOKIES_14: ${{ secrets.FB_COOKIES_14 }}
-          FB_COOKIES_15: ${{ secrets.FB_COOKIES_15 }}
-          FB_COOKIES_16: ${{ secrets.FB_COOKIES_16 }}
-          FB_COOKIES_17: ${{ secrets.FB_COOKIES_17 }}
-          FB_COOKIES_18: ${{ secrets.FB_COOKIES_18 }}
-          FB_COOKIES_19: ${{ secrets.FB_COOKIES_19 }}
-          FB_COOKIES_20: ${{ secrets.FB_COOKIES_20 }}
-
+          ACCOUNT_NUM: ${{ inputs.account_num }}
+          FORCE_ALL: ${{ inputs.force_all }}
           CONTENT: ${{ secrets.CONTENT }}
-          COMMENTS: ${{ secrets.COMMENTS }}
-          IMAGES: ${{ secrets.IMAGES }}
+          FB_COOKIES_1: ${{ secrets.FB_COOKIES_1 }}
+        run: python poster.py
 
-          GMAIL_EMAIL: ${{ secrets.GMAIL_EMAIL }}
-          GMAIL_APP_PW: ${{ secrets.GMAIL_APP_PW }}
-
-          PROXY: ${{ secrets.PROXY }}
-          PROXY_URL: ${{ secrets.PROXY_URL }}
-
-          ACC_NUM: ${{ matrix.acc_num }}
-          FORCE_ALL: ${{ github.event.inputs.force_all || 'true' }}
-        run: |
-          python poster.py
-
-      - name: Upload failure screenshot
+      - name: Upload debug artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: failure-screenshot-acc-${{ matrix.acc_num }}
-          path: failure_acc${{ matrix.acc_num }}.png
+          name: debug-poster-acc${{ inputs.account_num }}
+          path: |
+            debug_*.png
           if-no-files-found: ignore
-
-      - name: Commit state
-        if: always()
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-
-          git add -A
-
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "Update poster state"
-            git push || true
-          fi
+          retention-days: 7

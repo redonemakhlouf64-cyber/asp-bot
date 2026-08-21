@@ -1,0 +1,67 @@
+name: Auto Joiner
+
+on:
+  schedule:
+    - cron: '0 10 * * *'
+  workflow_dispatch:
+    inputs:
+      account_num:
+        description: 'Account number'
+        type: string
+        default: '1'
+      batch_size:
+        description: 'Joins per batch (30 = ~1 hour)'
+        type: string
+        default: '30'
+      batches:
+        description: 'Number of batches (2 = 60 joins/day)'
+        type: string
+        default: '2'
+
+permissions:
+  contents: write
+
+jobs:
+  join:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 240
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          pip install -r requirements.txt
+          playwright install --with-deps chromium || playwright install chromium
+
+      - name: Run joiner
+        env:
+          ACCOUNT_NUM: ${{ inputs.account_num || '1' }}
+          BATCH_SIZE: ${{ inputs.batch_size || '30' }}
+          BATCHES: ${{ inputs.batches || '2' }}
+          JOIN_DELAY_MIN: '100'
+          JOIN_DELAY_MAX: '140'
+          BATCH_PAUSE_MIN: '1800'
+          BATCH_PAUSE_MAX: '2400'
+          FB_COOKIES_1: ${{ secrets.FB_COOKIES_1 }}
+        run: python joiner.py
+
+      - name: Commit updated groups.txt
+        run: |
+          git config user.name "auto-joiner[bot]"
+          git config user.email "auto-joiner[bot]@users.noreply.github.com"
+          git add groups.txt joined_history.txt 2>/dev/null || true
+          if git diff --cached --quiet 2>/dev/null; then
+            echo "ℹ️ No new groups to commit"
+          else
+            git commit -m "🤖 Auto-Joiner: updated groups"
+            git push
+          fi

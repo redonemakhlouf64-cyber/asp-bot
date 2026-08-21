@@ -1,20 +1,11 @@
-# Sensitive
-cookies/
 .env
 *.env
-
-# Runtime state
 state/
 *.log
-
-# Python
 __pycache__/
 *.pyc
-*.pyo
 venv/
 .venv/
-
-# IDE
 .vscode/
 .idea/
 .DS_Store

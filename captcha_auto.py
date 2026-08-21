@@ -212,17 +212,44 @@ class AutoCaptchaSolver:
     # =================================================================
     # ONE-CALL HELPER: DETECT + SOLVE + SUBMIT
     # =================================================================
-    def auto_handle(self, driver, account_name: str = "Account") -> bool:
+    def _has_real_captcha(self, driver) -> bool:
         """
-        Detect a CAPTCHA on the current page, solve it, type it, submit.
-        Returns True on success. Fully autonomous — no human involvement.
+        Strict CAPTCHA detection: only True when the URL is a checkpoint page
+        OR a visible CAPTCHA element is actually on screen.
+        Avoids false positives from FB's HTML containing the word 'captcha'.
         """
-        page = driver.page_source.lower()
         url = driver.current_url.lower()
-
-        if not any(k in page or k in url for k in ["captcha", "checkpoint", "security check"]):
+        if any(p in url for p in ["/checkpoint/", "/challenge/", "/captcha", "security_check"]):
             return True
 
+        try:
+            for sel in [
+                "iframe[src*='recaptcha' i]",
+                "iframe[title*='captcha' i]",
+                "img[src*='captcha' i]",
+                "input[name*='captcha' i]",
+                "input[id*='captcha' i]",
+            ]:
+                for el in driver.find_elements(By.CSS_SELECTOR, sel):
+                    try:
+                        if el.is_displayed():
+                            return True
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+
+        return False
+
+    def auto_handle(self, driver, account_name: str = "Account") -> bool:
+        """
+        Detect a REAL CAPTCHA on the current page, solve it, submit.
+        Uses strict detection to avoid false positives on normal FB pages.
+        """
+        if not self._has_real_captcha(driver):
+            return True  # no real CAPTCHA — nothing to solve
+
+        log.info(f"[{account_name}] Real CAPTCHA confirmed — attempting to solve")
         solution = self.solve(driver, account_name)
         if not solution:
             return False

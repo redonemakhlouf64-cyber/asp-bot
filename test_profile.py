@@ -1,194 +1,156 @@
 """
-test_profile.py — Mobile Facebook (mbasic) posting test.
-Uses mbasic.facebook.com — simple HTML without JavaScript.
-Much easier for automation: standard textarea + submit button.
+test_profile.py — Direct HTTP post (no browser, no Selenium).
+Uses requests library + cookies to POST to Facebook's mbasic endpoint.
+This bypasses ALL browser detection.
 """
 import json
-import random
+import re
 import sys
-import time
 import logging
 from pathlib import Path
-
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+import requests
 
 COOKIES_DIR = Path("cookies")
 SCREENSHOTS_DIR = Path("screenshots")
 SCREENSHOTS_DIR.mkdir(exist_ok=True)
-
 POST_FILE = Path("post.txt")
-POST_TEXT = POST_FILE.read_text(encoding="utf-8").strip() if POST_FILE.exists() else "🧪 اختبار البوت"
+POST_TEXT = POST_FILE.read_text(encoding="utf-8").strip() if POST_FILE.exists() else "🧪 اختبار"
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [MOBILE] %(levelname)s: %(message)s")
-log = logging.getLogger("mobile")
-
-
-def make_driver():
-    """Chrome with mobile UA to render mbasic simplified HTML."""
-    opts = Options()
-    opts.add_argument("--headless=new")
-    opts.add_argument("--no-sandbox")
-    opts.add_argument("--disable-dev-shm-usage")
-    opts.add_argument("--window-size=414,896")
-    opts.add_argument(
-        "--user-agent=Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) "
-        "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1"
-    )
-    return webdriver.Chrome(options=opts)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [DIRECT] %(levelname)s: %(message)s")
+log = logging.getLogger("direct")
 
 
-def load_cookies(driver, path: Path):
-    # Cookies were exported from .facebook.com, work on any subdomain
-    driver.get("https://www.facebook.com/")
-    time.sleep(2)
-    driver.delete_all_cookies()
-    cookies = json.loads(path.read_text(encoding="utf-8"))
-    count = 0
-    for c in cookies:
-        c.pop("sameSite", None)
-        try:
-            driver.add_cookie(c)
-            count += 1
-        except Exception as e:
-            log.warning(f"Skip {c.get('name')}: {e}")
-    log.info(f"🍪 Injected {count}/{len(cookies)} cookies")
+def cookies_to_dict(path: Path):
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return {c["name"]: c["value"] for c in data}
 
 
-def snap(driver, name: str):
-    path = SCREENSHOTS_DIR / f"mobile_{name}.png"
+def save_html(name: str, content: str):
+    p = SCREENSHOTS_DIR / f"direct_{name}.html"
     try:
-        driver.save_screenshot(str(path))
-        log.info(f"📸 {path.name}")
+        p.write_text(content[:50000], encoding="utf-8")
+        log.info(f"📄 Saved: {p.name}")
     except Exception as e:
-        log.warning(f"Screenshot failed: {e}")
-
-
-def find_el(driver, selectors, timeout=5, clickable=True):
-    for kind, sel in selectors:
-        try:
-            by = By.XPATH if kind == "x" else By.CSS_SELECTOR
-            cond = EC.element_to_be_clickable if clickable else EC.presence_of_element_located
-            el = WebDriverWait(driver, timeout).until(cond((by, sel)))
-            return el, sel
-        except TimeoutException:
-            continue
-        except Exception:
-            continue
-    return None, None
+        log.warning(f"Save failed: {e}")
 
 
 def main():
     files = sorted(COOKIES_DIR.glob("*.json"))
     if not files:
-        log.error("❌ No cookies found")
+        log.error("❌ No cookies")
         sys.exit(1)
 
     log.info("=" * 50)
-    log.info("📱 MBASIC FACEBOOK POST TEST")
+    log.info("🌐 DIRECT HTTP POST TEST (no browser)")
     log.info(f"Cookies: {files[0].name}")
     log.info(f"Message: {POST_TEXT[:60]}")
     log.info("=" * 50)
 
-    driver = make_driver()
-    try:
-        # 1. Inject cookies via www then navigate to mbasic
-        load_cookies(driver, files[0])
+    cookies = cookies_to_dict(files[0])
+    log.info(f"🍪 Loaded {len(cookies)} cookies")
 
-        log.info("🌐 Loading mbasic.facebook.com...")
-        driver.get("https://mbasic.facebook.com/")
-        time.sleep(5)
+    session = requests.Session()
+    session.cookies.update(cookies)
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) "
+                      "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5,ar;q=0.3",
+    })
 
-        current_url = driver.current_url
-        log.info(f"URL: {current_url}")
-        log.info(f"Title: {driver.title}")
-        snap(driver, "1_home")
+    # 1. Load home page to get fb_dtsg token + form
+    log.info("🌐 GET https://mbasic.facebook.com/")
+    r = session.get("https://mbasic.facebook.com/", timeout=30, allow_redirects=True)
+    log.info(f"   Status: {r.status_code}")
+    log.info(f"   Final URL: {r.url}")
+    log.info(f"   Length: {len(r.text)} chars")
+    save_html("1_home", r.text)
 
-        if any(x in current_url.lower() for x in ["/login", "/checkpoint", "/help", "?next="]):
-            log.error("❌ Redirected — cookies expired/account limited")
-            log.error(f"→ {current_url}")
-            sys.exit(1)
+    if "/login" in r.url or "checkpoint" in r.url:
+        log.error("❌ Redirected to login/checkpoint")
+        log.error(f"→ URL: {r.url}")
+        log.error("→ DIAGNOSIS: cookies invalid or account limited")
+        sys.exit(1)
 
-        log.info("✅ mbasic home loaded")
+    if len(r.text) < 5000:
+        log.warning(f"⚠️  Response very short ({len(r.text)} chars)")
 
-        # 2. Find composer textarea on home page
-        log.info("🔎 Looking for TEXTAREA...")
-        textarea, tsel = find_el(driver, [
-            ("c", "textarea[name='xc_message']"),
-            ("c", "form[action*='composer'] textarea"),
-            ("c", "form textarea"),
-            ("c", "textarea"),
-        ], timeout=5, clickable=False)
+    # Extract fb_dtsg token
+    dtsg_patterns = [
+        r'name="fb_dtsg" value="([^"]+)"',
+        r'"DTSGInitialData",\[\],\{"token":"([^"]+)"',
+        r'"token":"([^"]+)".*?fb_dtsg',
+    ]
+    fb_dtsg = None
+    for pat in dtsg_patterns:
+        m = re.search(pat, r.text)
+        if m:
+            fb_dtsg = m.group(1)
+            log.info(f"✅ Got fb_dtsg via pattern: {pat[:40]}...")
+            log.info(f"   Token: {fb_dtsg[:30]}...")
+            break
 
-        if not textarea:
-            log.warning("⚠️  No textarea on home. Trying direct composer URL...")
-            driver.get("https://mbasic.facebook.com/composer/")
-            time.sleep(4)
-            snap(driver, "2b_composer_page")
-            log.info(f"URL now: {driver.current_url}")
+    if not fb_dtsg:
+        log.error("❌ Could NOT find fb_dtsg token in response")
+        log.info("→ HTML dump saved to direct_1_home.html")
+        log.info("→ This means FB is not serving the classic form")
+        sys.exit(1)
 
-            textarea, tsel = find_el(driver, [
-                ("c", "textarea[name='xc_message']"),
-                ("c", "form textarea"),
-                ("c", "textarea"),
-            ], timeout=5, clickable=False)
+    # Extract composer form action
+    form_patterns = [
+        r'<form[^>]+action="([^"]*composer[^"]*)"',
+        r'<form[^>]+action="([^"]+)"[^>]*>[^<]*<textarea[^>]+name="xc_message"',
+    ]
+    composer_action = None
+    for pat in form_patterns:
+        m = re.search(pat, r.text, re.DOTALL)
+        if m:
+            composer_action = m.group(1).replace("&amp;", "&")
+            log.info(f"✅ Found composer form action: {composer_action[:80]}")
+            break
 
-        if not textarea:
-            snap(driver, "3_no_textarea_anywhere")
-            log.error("❌ No textarea found ANYWHERE")
-            log.info("📄 Page HTML (first 3000 chars):")
-            try:
-                html = driver.page_source[:3000]
-                for line in html.split("\n")[:60]:
-                    log.info(f"  {line}")
-                (SCREENSHOTS_DIR / "mobile_page.html").write_text(driver.page_source[:20000], encoding="utf-8")
-            except Exception as e:
-                log.warning(f"HTML dump failed: {e}")
-            sys.exit(1)
+    if not composer_action:
+        log.warning("⚠️  No composer form on home. Trying default paths...")
+        composer_action = "/composer/mbasic/"
 
-        log.info(f"✅ Found textarea: {tsel}")
+    if not composer_action.startswith("http"):
+        composer_action = "https://mbasic.facebook.com" + composer_action
 
-        # 3. Type the message
-        textarea.click()
-        time.sleep(1)
-        textarea.send_keys(POST_TEXT)
-        time.sleep(2)
-        snap(driver, "3_text_typed")
+    # 2. POST the message
+    post_data = {
+        "fb_dtsg": fb_dtsg,
+        "xc_message": POST_TEXT,
+        "view_post": "Post",
+    }
 
-        # 4. Find submit/Post button
-        log.info("🔎 Looking for POST/SUBMIT button...")
-        post_btn, psel = find_el(driver, [
-            ("c", "input[type='submit'][value='Post']"),
-            ("c", "button[type='submit'][name='view_post']"),
-            ("x", "//input[@type='submit' and (@value='Post' or @value='نشر' or @value='Publier')]"),
-            ("x", "//button[@type='submit' and (contains(., 'Post') or contains(., 'نشر'))]"),
-            ("c", "form input[type='submit']"),
-            ("c", "form button[type='submit']"),
-        ], timeout=5)
+    log.info(f"📤 POST {composer_action}")
+    r2 = session.post(composer_action, data=post_data, timeout=30, allow_redirects=True)
+    log.info(f"   Status: {r2.status_code}")
+    log.info(f"   Final URL: {r2.url}")
+    log.info(f"   Response length: {len(r2.text)}")
+    save_html("2_post_response", r2.text)
 
-        if not post_btn:
-            snap(driver, "4_no_post_btn")
-            log.error("❌ No Post/Submit button found")
-            sys.exit(1)
+    # Check success indicators
+    text_lower = r2.text.lower()
+    if any(x in r2.url.lower() for x in ["/login", "checkpoint"]):
+        log.error("❌ POST redirected to login/checkpoint")
+        sys.exit(1)
 
-        log.info(f"✅ Found Post button: {psel}")
-        post_btn.click()
-        time.sleep(8)
-        snap(driver, "5_final")
+    if "story_id" in text_lower or "story_fbid" in text_lower:
+        log.info("✅✅✅ POST SUCCESS — story_id in response!")
+    elif r2.url != composer_action and r2.status_code == 200:
+        log.info("✅ Likely SUCCESS (redirected after POST)")
+        log.info(f"   → Redirected to: {r2.url}")
+    else:
+        log.warning("⚠️  Unclear result — check direct_2_post_response.html")
+        # Show first bit
+        snippet = r2.text[:1500]
+        for line in snippet.split("\n")[:30]:
+            log.info(f"   {line}")
 
-        log.info("=" * 50)
-        log.info("✅✅✅ POSTED VIA MBASIC!")
-        log.info("→ Mobile approach works!")
-        log.info("→ We can now rewrite poster.py + joiner.py with mbasic")
-        log.info("=" * 50)
-
-    finally:
-        try: driver.quit()
-        except Exception: pass
+    log.info("=" * 50)
+    log.info("🏁 Test complete — check artifacts for HTML dumps")
+    log.info("=" * 50)
 
 
 if __name__ == "__main__":

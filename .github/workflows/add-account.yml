@@ -1,26 +1,13 @@
-name: Add Account (Auto)
+name: Add Account (Verify Cookies)
 
 on:
   workflow_dispatch:
-    inputs:
-      account_number:
-        description: 'Account # (empty = all)'
-        required: false
-        default: ''
-      manual_code:
-        description: '2FA code (empty = fetch from Gmail)'
-        required: false
-        default: ''
-      force_all:
-        description: 'Overwrite existing FB_COOKIES_N'
-        required: false
-        default: 'false'
-        type: boolean
 
 jobs:
-  add:
-    runs-on: ubuntu-22.04
-    timeout-minutes: 120
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,20 +19,25 @@ jobs:
 
       - name: Install deps
         run: |
-          pip install -r requirements.txt
-          pip install pynacl
-          playwright install chromium
-          playwright install-deps chromium
+          python -m pip install --upgrade pip
+          pip install playwright
+          python -m playwright install chromium
 
-      - name: Run login
+      - name: Run verifier
         env:
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GH_PAT: ${{ secrets.GH_PAT }}
-          FB_ACCOUNTS: ${{ secrets.FB_ACCOUNTS }}
-          GMAIL_EMAIL: ${{ secrets.GMAIL_EMAIL }}
-          GMAIL_APP_PW: ${{ secrets.GMAIL_APP_PW }}
-          ACCOUNT_NUM: ${{ inputs.account_number }}
-          MANUAL_CODE: ${{ inputs.manual_code }}
-          FORCE_ALL: ${{ inputs.force_all }}
-          PROXY_URL: ${{ secrets.PROXY_URL }}
+          FB_COOKIES_1: ${{ secrets.FB_COOKIES_1 }}
+          FB_COOKIES_2: ${{ secrets.FB_COOKIES_2 }}
+          FB_COOKIES_3: ${{ secrets.FB_COOKIES_3 }}
+          FB_COOKIES_4: ${{ secrets.FB_COOKIES_4 }}
+          FB_COOKIES_5: ${{ secrets.FB_COOKIES_5 }}
         run: python add_account.py
+
+      - name: Upload debug artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-debug
+          path: |
+            verify_*.png
+          if-no-files-found: ignore
+          retention-days: 7

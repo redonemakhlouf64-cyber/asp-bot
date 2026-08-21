@@ -1,0 +1,18 @@
+# ==========================================
+# blacklist.txt
+# Groups to permanently skip
+# Reasons: banned, deleted, requires payment,
+#          asks illegal questions, spam-only
+# ==========================================
+# Format: one group ID or vanity name per line
+# Lines starting with # are ignored
+# Auto-updated by joiner.py after 3 failed attempts
+
+# --- Known problematic groups (manual entries) ---
+# fake_business_group_example
+# scam_mlm_group_example
+
+# --- Auto-added by bot (do not edit below) ---
+# === AUTO-BLACKLIST START ===
+
+# === AUTO-BLACKLIST END ===

@@ -1,18 +1,18 @@
-post	Check cookies & post text	﻿2026-08-21T18:25:15.2728649Z ##[group]Run echo "Cookies:" && ls -lh cookies/
-post	Check cookies & post text	2026-08-21T18:25:15.2729306Z ^[[36;1mecho "Cookies:" && ls -lh cookies/^[[0m
-post	Check cookies & post text	2026-08-21T18:25:15.2729818Z ^[[36;1mecho "Post text:" && cat post.txt^[[0m
-post	Check cookies & post text	2026-08-21T18:25:15.2780015Z shell: /usr/bin/bash -e {0}
-post	Check cookies & post text	2026-08-21T18:25:15.2780275Z env:
-post	Check cookies & post text	2026-08-21T18:25:15.2780547Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.16/x64
-post	Check cookies & post text	2026-08-21T18:25:15.2781013Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.16/x64/lib/pkgconfig
-post	Check cookies & post text	2026-08-21T18:25:15.2781485Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.16/x64
-post	Check cookies & post text	2026-08-21T18:25:15.2781870Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.16/x64
-post	Check cookies & post text	2026-08-21T18:25:15.2782255Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.16/x64
-post	Check cookies & post text	2026-08-21T18:25:15.2782636Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.16/x64/lib
-post	Check cookies & post text	2026-08-21T18:25:15.2782958Z ##[endgroup]
-post	Check cookies & post text	2026-08-21T18:25:15.2841849Z Cookies:
-post	Check cookies & post text	2026-08-21T18:25:15.2856816Z total 8.0K
-post	Check cookies & post text	2026-08-21T18:25:15.2857328Z -rw-r--r-- 1 runner runner 4.1K Aug 21 18:24 account_01.json
-post	Check cookies & post text	2026-08-21T18:25:15.2858888Z Post text:
-post	Check cookies & post text	2026-08-21T18:25:15.2869047Z cat: post.txt: No such file or directory
-post	Check cookies & post text	2026-08-21T18:25:15.2883983Z ##[error]Process completed with exit code 1.
+post	Check cookies & post text	﻿2026-08-21T18:31:27.5114705Z ##[group]Run echo "Cookies:" && ls -lh cookies/
+post	Check cookies & post text	2026-08-21T18:31:27.5115149Z ^[[36;1mecho "Cookies:" && ls -lh cookies/^[[0m
+post	Check cookies & post text	2026-08-21T18:31:27.5115515Z ^[[36;1mecho "Post text:" && cat post.txt^[[0m
+post	Check cookies & post text	2026-08-21T18:31:27.5137528Z shell: /usr/bin/bash -e {0}
+post	Check cookies & post text	2026-08-21T18:31:27.5137831Z env:
+post	Check cookies & post text	2026-08-21T18:31:27.5138202Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.16/x64
+post	Check cookies & post text	2026-08-21T18:31:27.5138637Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.16/x64/lib/pkgconfig
+post	Check cookies & post text	2026-08-21T18:31:27.5139090Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.16/x64
+post	Check cookies & post text	2026-08-21T18:31:27.5139513Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.16/x64
+post	Check cookies & post text	2026-08-21T18:31:27.5139921Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.16/x64
+post	Check cookies & post text	2026-08-21T18:31:27.5140341Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.16/x64/lib
+post	Check cookies & post text	2026-08-21T18:31:27.5140694Z ##[endgroup]
+post	Check cookies & post text	2026-08-21T18:31:27.5178450Z Cookies:
+post	Check cookies & post text	2026-08-21T18:31:27.5189545Z total 8.0K
+post	Check cookies & post text	2026-08-21T18:31:27.5190302Z -rw-r--r-- 1 runner runner 4.1K Aug 21 18:30 account_01.json
+post	Check cookies & post text	2026-08-21T18:31:27.5191067Z Post text:
+post	Check cookies & post text	2026-08-21T18:31:27.5198557Z cat: post.txt: No such file or directory
+post	Check cookies & post text	2026-08-21T18:31:27.5210665Z ##[error]Process completed with exit code 1.

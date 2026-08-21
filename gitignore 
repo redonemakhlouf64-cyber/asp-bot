@@ -1,0 +1,67 @@
+# ==========================================
+# .gitignore - Protect sensitive files
+# ==========================================
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.env
+secrets/
+credentials.json
+accounts.txt
+passwords.txt
+tokens.txt
+
+# Session & Cookies
+cookies/
+sessions/
+*.session
+cookies.pkl
+cookies.json
+fb_session/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+
+# Logs
+*.log
+logs/
+debug.log
+error.log
+
+# State files (dynamic data)
+state/*.json
+state/*.db
+state/temp/
+
+# Screenshots (from failures)
+screenshots/
+*.png
+*.jpg
+!logo.png
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Chrome/Selenium
+chromedriver
+geckodriver
+*.exe
+
+# Backups
+*.bak
+*.backup
+backup/

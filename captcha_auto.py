@@ -58,7 +58,6 @@ class AutoCaptchaSolver:
         Google's free web speech API.
         """
         try:
-            # Look for common "audio challenge" buttons
             audio_selectors = [
                 "button#recaptcha-audio-button",
                 "button[aria-label*='audio' i]",
@@ -82,7 +81,6 @@ class AutoCaptchaSolver:
             audio_btn.click()
             time.sleep(2)
 
-            # Grab the mp3 source url
             audio_src = None
             for sel in ["audio#audio-source", "audio source", "audio"]:
                 try:
@@ -97,7 +95,6 @@ class AutoCaptchaSolver:
                 log.warning("Audio element not found")
                 return None
 
-            # Download mp3
             mp3_data = requests.get(audio_src, timeout=30).content
 
             with tempfile.TemporaryDirectory() as tmp:
@@ -107,10 +104,8 @@ class AutoCaptchaSolver:
                 with open(mp3_path, "wb") as f:
                     f.write(mp3_data)
 
-                # Convert mp3 → wav (Google speech needs wav)
                 AudioSegment.from_mp3(mp3_path).export(wav_path, format="wav")
 
-                # Transcribe using Google's FREE web endpoint
                 with sr.AudioFile(wav_path) as source:
                     audio = self.recognizer.record(source)
 
@@ -135,14 +130,12 @@ class AutoCaptchaSolver:
         try:
             img = Image.open(io.BytesIO(image_bytes))
 
-            # Preprocess: grayscale → binarize → denoise → upscale
             img = img.convert("L")
             img = ImageOps.autocontrast(img)
             img = img.point(lambda p: 0 if p < 140 else 255)
             img = img.filter(ImageFilter.MedianFilter(size=3))
             img = img.resize((img.width * 3, img.height * 3), Image.LANCZOS)
 
-            # Only allow alphanumerics
             config = (
                 "--oem 3 --psm 8 "
                 "-c tessedit_char_whitelist="
@@ -163,7 +156,6 @@ class AutoCaptchaSolver:
             return None
 
     def solve_image_from_element(self, element) -> Optional[str]:
-        """Grab a single element screenshot and OCR it."""
         try:
             return self.solve_image_captcha(element.screenshot_as_png)
         except Exception as e:
@@ -174,21 +166,15 @@ class AutoCaptchaSolver:
     # MAIN ENTRYPOINT
     # =================================================================
     def solve(self, driver, account_name: str = "Account") -> Optional[str]:
-        """
-        Try every free strategy in order. Returns the solution string
-        or None if all strategies failed for this attempt.
-        """
         log.info(f"[{account_name}] CAPTCHA detected — solving automatically")
 
         for attempt in range(1, self.max_retries + 1):
             log.info(f"[{account_name}] Attempt {attempt}/{self.max_retries}")
 
-            # 1) Audio first (highest accuracy)
             answer = self.solve_audio_captcha(driver)
             if answer:
                 return answer
 
-            # 2) Fall back to image OCR on visible CAPTCHA <img>
             try:
                 for sel in [
                     "img[src*='captcha' i]",
@@ -205,7 +191,6 @@ class AutoCaptchaSolver:
             except Exception as e:
                 log.warning(f"Image lookup failed: {e}")
 
-            # 3) Refresh CAPTCHA if a reload button exists, then retry
             try:
                 for sel in [
                     "button.rc-button-reload",
@@ -236,13 +221,12 @@ class AutoCaptchaSolver:
         url = driver.current_url.lower()
 
         if not any(k in page or k in url for k in ["captcha", "checkpoint", "security check"]):
-            return True  # nothing to do
+            return True
 
         solution = self.solve(driver, account_name)
         if not solution:
             return False
 
-        # Try to type it into the most likely input
         for sel in [
             "input#audio-response",
             "input[name*='captcha' i]",
@@ -258,7 +242,6 @@ class AutoCaptchaSolver:
             except Exception:
                 continue
 
-        # Click submit
         for sel in [
             "button#recaptcha-verify-button",
             "button[type='submit']",
@@ -274,7 +257,6 @@ class AutoCaptchaSolver:
                 continue
 
         time.sleep(3)
-        # Verify we passed
         after = driver.page_source.lower()
         if "captcha" in after or "checkpoint" in after:
             log.warning(f"[{account_name}] CAPTCHA still present after submit")
@@ -284,9 +266,6 @@ class AutoCaptchaSolver:
         return True
 
 
-# ===================================================================
-# QUICK TEST
-# ===================================================================
 if __name__ == "__main__":
     solver = AutoCaptchaSolver()
     print("✅ AutoCaptchaSolver initialized — 100%% automatic, 0%% manual")

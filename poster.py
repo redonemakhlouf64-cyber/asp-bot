@@ -1,318 +1,360 @@
-#!/usr/bin/env python3
 """
-poster.py v8.4 — mbasic edition (asp-bot final)
-- يقرأ groups.txt (يدعم URL أو ID)
-- ينشر على الحائط وفي الجروبات
-- يحذف الجروبات الفاشلة تلقائياً
+poster.py
+==========
+Cookie-based Facebook group poster.
+Reads cookies/*.json, injects into Chrome, posts to groups.
+No email/password. No login form. Fully automatic.
 """
 
-import os
-import re
-import sys
 import json
 import time
 import random
+import logging
+import traceback
 from pathlib import Path
-from collections import Counter
-from playwright.sync_api import sync_playwright
+from typing import List
 
-# ============ الإعدادات ============
-ACCOUNT_NUM = int(os.environ.get("ACCOUNT_NUM", "1"))
-CONTENT = os.environ.get("CONTENT", "").strip()
-FB_COOKIES = os.environ.get(f"FB_COOKIES_{ACCOUNT_NUM}", "")
-FORCE_ALL = os.environ.get("FORCE_ALL", "false").lower() == "true"
-AUTO_REMOVE_FAILED = os.environ.get("AUTO_REMOVE_FAILED", "true").lower() == "true"
-
-MBASIC = "https://mbasic.facebook.com"
-GROUPS_FILE = Path("groups.txt")
-FAILED_FILE = Path("failed_groups.txt")
-
-USER_AGENT = (
-    "Mozilla/5.0 (Linux; Android 9; SM-G950F) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/91.0.4472.120 Mobile Safari/537.36"
+from selenium.common.exceptions import (
+    TimeoutException,
+    WebDriverException,
 )
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
-stats = {"ok": [], "failed": [], "reasons": {}}
+from device_profiles import get_driver_for_account
+from captcha_auto import AutoCaptchaSolver
+
+# ===================================================================
+# LOGGING
+# ===================================================================
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [POSTER] %(levelname)s: %(message)s",
+    handlers=[
+        logging.FileHandler("poster.log", encoding="utf-8"),
+        logging.StreamHandler(),
+    ],
+)
+log = logging.getLogger(__name__)
+
+# ===================================================================
+# CONFIG
+# ===================================================================
+COOKIES_DIR = Path("cookies")
+GROUPS_FILE = Path("groups.txt")
+POST_FILE = Path("post.txt")
+POSTED_FILE = Path("state/posted.json")
+SCREENSHOTS_DIR = Path("screenshots")
+
+HEADLESS = True
+MIN_DELAY, MAX_DELAY = 3, 8
+GROUP_COOLDOWN = (60, 180)      # wait between groups per account
+ACCOUNT_COOLDOWN = (120, 300)   # wait between accounts
+POSTS_PER_ACCOUNT_LIMIT = 15    # safety cap per run (avoid spam-flag)
+
+solver = AutoCaptchaSolver()
 
 
-def log(msg):
-    print(f"[poster] {msg}", flush=True)
+# ===================================================================
+# HELPERS
+# ===================================================================
+def human_sleep(a: float = MIN_DELAY, b: float = MAX_DELAY) -> None:
+    time.sleep(random.uniform(a, b))
 
 
-def extract_group_id(line):
-    line = line.strip().rstrip("/")
-    if line.isdigit():
-        return line
-    m = re.search(r"/groups/(\d+)", line)
-    if m:
-        return m.group(1)
-    m = re.search(r"/groups/([^/?&#]+)", line)
-    if m:
-        return m.group(1)
-    return line
+def load_post_text() -> str:
+    if not POST_FILE.exists():
+        log.error(f"{POST_FILE} not found — create it with your post text")
+        return ""
+    return POST_FILE.read_text(encoding="utf-8").strip()
 
 
-def load_groups():
+def load_groups() -> List[str]:
     if not GROUPS_FILE.exists():
+        log.error(f"{GROUPS_FILE} not found")
         return []
-    ids = []
-    for ln in GROUPS_FILE.read_text(encoding="utf-8").splitlines():
-        s = ln.strip()
-        if not s or s.startswith("#"):
-            continue
-        gid = extract_group_id(s)
-        if gid:
-            ids.append(gid)
-    return ids
+    return [
+        line.strip() for line in GROUPS_FILE.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    ]
 
 
-def remove_failed_from_groups(failed_ids):
-    if not failed_ids or not GROUPS_FILE.exists():
-        return
-    lines = GROUPS_FILE.read_text(encoding="utf-8").splitlines()
-    kept, removed = [], []
-    for ln in lines:
-        s = ln.strip()
-        if not s or s.startswith("#"):
-            kept.append(ln)
-            continue
-        gid = extract_group_id(s)
-        if gid in failed_ids:
-            removed.append(ln)
-        else:
-            kept.append(ln)
-    if removed:
-        GROUPS_FILE.write_text("\n".join(kept) + "\n", encoding="utf-8")
-        with FAILED_FILE.open("a", encoding="utf-8") as f:
-            ts = time.strftime("%Y-%m-%d %H:%M:%S")
-            for ln in removed:
-                gid = extract_group_id(ln.strip())
-                reason = stats["reasons"].get(gid, "unknown")
-                f.write(f"{ts} | {reason} | {ln.strip()}\n")
-        log(f"🗑️ Removed {len(removed)} groups → saved to failed_groups.txt")
+def list_accounts() -> List[str]:
+    if not COOKIES_DIR.exists():
+        log.error(f"{COOKIES_DIR}/ folder not found")
+        return []
+    return sorted(f.stem for f in COOKIES_DIR.glob("*.json"))
 
 
-def parse_cookies(cookie_str):
-    cookies = []
+def load_posted_state() -> dict:
+    if POSTED_FILE.exists():
+        try:
+            return json.loads(POSTED_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+    return {}
+
+
+def save_posted_state(state: dict) -> None:
+    POSTED_FILE.parent.mkdir(parents=True, exist_ok=True)
+    POSTED_FILE.write_text(json.dumps(state, indent=2), encoding="utf-8")
+
+
+# ===================================================================
+# COOKIE INJECTION (same as joiner)
+# ===================================================================
+def inject_cookies(driver, account_id: str) -> bool:
+    cookie_file = COOKIES_DIR / f"{account_id}.json"
+    if not cookie_file.exists():
+        log.error(f"[{account_id}] Cookie file not found: {cookie_file}")
+        return False
+
     try:
-        data = json.loads(cookie_str)
-        if isinstance(data, list):
-            for c in data:
-                cookies.append({
-                    "name": c["name"], "value": c["value"],
-                    "domain": c.get("domain", ".facebook.com"),
-                    "path": c.get("path", "/"),
-                })
-            return cookies
-    except json.JSONDecodeError:
-        pass
-    for pair in cookie_str.split(";"):
-        pair = pair.strip()
-        if "=" not in pair:
-            continue
-        name, value = pair.split("=", 1)
-        cookies.append({
-            "name": name.strip(), "value": value.strip(),
-            "domain": ".facebook.com", "path": "/",
-        })
-    return cookies
+        raw = json.loads(cookie_file.read_text(encoding="utf-8"))
+        cookies = raw.get("cookies", raw) if isinstance(raw, dict) else raw
+        if not isinstance(cookies, list):
+            return False
 
+        driver.get("https://www.facebook.com/")
+        time.sleep(2)
+        driver.delete_all_cookies()
 
-def find_textarea(page):
-    for sel in [
-        "textarea[name='xc_message']",
-        "textarea[name='status']",
-        "textarea[placeholder*='penses']",
-        "textarea[placeholder*='thinking']",
-        "textarea[placeholder*='تفكر']",
-        "textarea",
-    ]:
-        el = page.query_selector(sel)
-        if el:
-            return el
-    return None
+        added = 0
+        for c in cookies:
+            cookie = {
+                "name":   c.get("name"),
+                "value":  c.get("value"),
+                "domain": c.get("domain", ".facebook.com"),
+                "path":   c.get("path", "/"),
+                "secure": c.get("secure", True),
+            }
+            if "httpOnly" in c: cookie["httpOnly"] = c["httpOnly"]
+            if "sameSite" in c and c["sameSite"] in ("Strict", "Lax", "None"):
+                cookie["sameSite"] = c["sameSite"]
+            if "expirationDate" in c:
+                cookie["expiry"] = int(c["expirationDate"])
+            elif "expiry" in c:
+                cookie["expiry"] = int(c["expiry"])
 
+            if not cookie["name"] or cookie["value"] is None:
+                continue
 
-def detect_failure_reason(page):
-    url = page.url.lower()
-    if "checkpoint" in url:
-        return "checkpoint"
-    if "login" in url:
-        return "session_expired"
-    if "www.facebook.com" in url and "mbasic" not in url:
-        return "redirect_www"
-    c = page.content().lower()
-    if "you must be a member" in c or "vous devez être membre" in c or "يجب أن تكون عضواً" in c:
-        return "not_member"
-    if "this group is closed" in c or "groupe fermé" in c:
-        return "group_closed"
-    if "content not found" in c or "introuvable" in c or "unavailable" in c:
-        return "not_found"
-    return "no_textarea"
+            try:
+                driver.add_cookie(cookie)
+                added += 1
+            except Exception:
+                pass
 
+        log.info(f"[{account_id}] Injected {added} cookies")
+        return added > 0
 
-def is_session_alive(page):
-    url = page.url.lower()
-    return "login" not in url and "checkpoint" not in url
-
-
-def post_to_wall(page):
-    log("📝 Wall...")
-    for url in [f"{MBASIC}/home.php", f"{MBASIC}/", f"{MBASIC}/composer/"]:
-        page.goto(url, timeout=30000, wait_until="domcontentloaded")
-        ta = find_textarea(page)
-        if ta:
-            log(f"  ✅ textarea @ {url}")
-            break
-        link = (page.query_selector("a[href*='composer']")
-                or page.query_selector("a:has-text('penses')")
-                or page.query_selector("a:has-text('mind')"))
-        if link:
-            link.click()
-            page.wait_for_load_state("domcontentloaded", timeout=30000)
-            ta = find_textarea(page)
-            if ta:
-                break
-    else:
-        ta = None
-    if not ta:
-        log("❌ wall failed")
+    except Exception as e:
+        log.error(f"[{account_id}] Cookie injection failed: {e}")
         return False
-    ta.fill(CONTENT)
-    submit = (page.query_selector("input[name='view_post']")
-              or page.query_selector("input[type='submit']"))
-    if not submit:
+
+
+def verify_logged_in(driver, account_id: str) -> bool:
+    driver.get("https://www.facebook.com/")
+    human_sleep(3, 5)
+
+    url = driver.current_url.lower()
+    if "login" in url or "checkpoint" in url:
+        log.warning(f"[{account_id}] Cookies invalid / expired")
         return False
-    submit.click()
-    page.wait_for_load_state("domcontentloaded", timeout=30000)
-    confirm = (page.query_selector("input[value*='Confirmer']")
-               or page.query_selector("input[value*='Confirm']"))
-    if confirm:
-        confirm.click()
-        page.wait_for_load_state("domcontentloaded", timeout=30000)
-    log("✅ wall done")
+
+    log.info(f"[{account_id}] ✅ Logged in via cookies")
     return True
 
 
-def post_to_group(page, gid):
-    log(f"👥 {gid}...")
-    urls = [
-        f"{MBASIC}/composer/?target_id={gid}",
-        f"{MBASIC}/groups/{gid}?view=permalink",
-        f"{MBASIC}/groups/{gid}",
-    ]
-    ta = None
-    for url in urls:
-        page.goto(url, timeout=30000, wait_until="domcontentloaded")
-        if not is_session_alive(page):
-            return False, "session_expired"
-        ta = find_textarea(page)
-        if ta:
-            break
-        link = (page.query_selector("a[href*='composer'][href*='target_id']")
-                or page.query_selector("a:has-text('Write')")
-                or page.query_selector("a:has-text('Écrire')")
-                or page.query_selector("a:has-text('اكتب')"))
-        if link:
-            link.click()
-            page.wait_for_load_state("domcontentloaded", timeout=30000)
-            ta = find_textarea(page)
-            if ta:
-                break
-    if not ta:
-        reason = detect_failure_reason(page)
-        log(f"  ❌ {reason}")
-        return False, reason
-    ta.fill(CONTENT)
-    submit = (page.query_selector("input[name='view_post']")
-              or page.query_selector("input[type='submit']"))
-    if not submit:
-        return False, "no_submit"
-    submit.click()
-    page.wait_for_load_state("domcontentloaded", timeout=30000)
-    log(f"  ✅ posted")
-    return True, "ok"
-
-
-def main():
-    log("=" * 50)
-    log("poster.py v8.4 (final)")
-    log(f"Account #{ACCOUNT_NUM} | auto_remove={AUTO_REMOVE_FAILED}")
-    log("=" * 50)
-
-    if not CONTENT:
-        log("❌ CONTENT empty"); sys.exit(1)
-    if not FB_COOKIES:
-        log(f"❌ FB_COOKIES_{ACCOUNT_NUM} empty"); sys.exit(1)
-
-    gids = load_groups()
-    log(f"📂 Groups: {len(gids)}")
-    cookies = parse_cookies(FB_COOKIES)
-    log(f"🍪 Cookies: {len(cookies)}")
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
-        ctx = browser.new_context(
-            user_agent=USER_AGENT,
-            viewport={"width": 360, "height": 640},
-            locale="en-US",
-        )
-        ctx.add_cookies(cookies)
-        page = ctx.new_page()
-
+# ===================================================================
+# POST TO GROUP
+# ===================================================================
+def _find_composer_trigger(driver):
+    """Click the 'Write something...' trigger to open the modal."""
+    for sel in [
+        "//div[@role='button' and (contains(., 'Write something') or contains(., 'Anything on your mind'))]",
+        "//span[contains(text(), 'Write something')]/ancestor::div[@role='button'][1]",
+        "//span[contains(text(), 'اكتب شيئا')]/ancestor::div[@role='button'][1]",
+        "//span[contains(text(), 'شارك أفكارك')]/ancestor::div[@role='button'][1]",
+        "div[aria-label*='Write something' i]",
+        "div[aria-label*='Create a post' i]",
+    ]:
         try:
-            page.goto(f"{MBASIC}/", timeout=30000, wait_until="domcontentloaded")
-            if not is_session_alive(page):
-                log(f"❌ Session invalid → {page.url}")
-                sys.exit(2)
-            cu = next((c["value"] for c in cookies if c["name"] == "c_user"), "?")
-            log(f"✅ Logged in as {cu}")
+            by = By.XPATH if sel.startswith("//") else By.CSS_SELECTOR
+            btn = WebDriverWait(driver, 6).until(
+                EC.element_to_be_clickable((by, sel))
+            )
+            btn.click()
+            return True
+        except TimeoutException:
+            continue
+        except Exception:
+            continue
+    return False
 
-            post_to_wall(page)
 
-            for gid in gids:
-                d = random.randint(15, 40)
-                log(f"⏳ sleep {d}s")
-                time.sleep(d)
-                try:
-                    ok, reason = post_to_group(page, gid)
-                    if ok:
-                        stats["ok"].append(gid)
-                    else:
-                        stats["failed"].append(gid)
-                        stats["reasons"][gid] = reason
-                        if reason in ("session_expired", "checkpoint"):
-                            log("🛑 Session broken — stop")
-                            break
-                except Exception as e:
-                    log(f"⚠️ {gid}: {type(e).__name__}: {e}")
-                    stats["failed"].append(gid)
-                    stats["reasons"][gid] = "exception"
+def _find_textarea(driver):
+    """Locate the contenteditable composer inside the modal."""
+    for sel in [
+        "div[role='dialog'] div[contenteditable='true'][role='textbox']",
+        "div[contenteditable='true'][data-lexical-editor='true']",
+        "div[role='textbox'][contenteditable='true']",
+    ]:
+        try:
+            return WebDriverWait(driver, 8).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, sel))
+            )
+        except TimeoutException:
+            continue
+    return None
 
-            log("=" * 50)
-            log(f"✅ Success: {len(stats['ok'])}")
-            log(f"❌ Failed:  {len(stats['failed'])}")
-            for r, n in Counter(stats["reasons"].values()).items():
-                log(f"   • {r}: {n}")
 
-            if AUTO_REMOVE_FAILED and stats["failed"]:
-                temp = {"session_expired", "checkpoint", "exception"}
-                to_del = [g for g in stats["failed"]
-                          if stats["reasons"].get(g) not in temp]
-                if to_del:
-                    remove_failed_from_groups(to_del)
-                else:
-                    log("ℹ️ Temporary failures only — groups.txt kept")
+def _click_post_button(driver):
+    for sel in [
+        "//div[@aria-label='Post' and @role='button']",
+        "//span[text()='Post']/ancestor::div[@role='button'][1]",
+        "//span[text()='نشر']/ancestor::div[@role='button'][1]",
+        "//div[@role='button'][.//span[text()='Post']]",
+    ]:
+        try:
+            btn = WebDriverWait(driver, 8).until(
+                EC.element_to_be_clickable((By.XPATH, sel))
+            )
+            btn.click()
+            return True
+        except TimeoutException:
+            continue
+        except Exception:
+            continue
+    return False
 
-            log("🎉 Done.")
 
+def post_to_group(driver, group_url: str, text: str, account_id: str) -> bool:
+    try:
+        driver.get(group_url)
+        human_sleep(4, 7)
+
+        solver.auto_handle(driver, account_name=account_id)
+
+        if not _find_composer_trigger(driver):
+            log.warning(f"[{account_id}] no_composer_trigger: {group_url}")
+            return False
+
+        human_sleep(3, 5)
+        textarea = _find_textarea(driver)
+        if not textarea:
+            log.warning(f"[{account_id}] no_textarea: {group_url}")
+            return False
+
+        # Type text like a human (character-by-character)
+        textarea.click()
+        human_sleep(1, 2)
+        for line in text.split("\n"):
+            for ch in line:
+                textarea.send_keys(ch)
+                time.sleep(random.uniform(0.02, 0.09))
+            textarea.send_keys(Keys.SHIFT + Keys.ENTER)
+
+        human_sleep(2, 4)
+
+        if _click_post_button(driver):
+            human_sleep(5, 8)
+            log.info(f"[{account_id}] ✅ Posted: {group_url}")
+            return True
+        else:
+            log.warning(f"[{account_id}] no_post_btn: {group_url}")
+            return False
+
+    except WebDriverException as e:
+        log.error(f"[{account_id}] Post error on {group_url}: {e}")
+        return False
+
+
+# ===================================================================
+# PER-ACCOUNT FLOW
+# ===================================================================
+def process_account(account_id: str, groups: List[str], text: str, posted_state: dict) -> None:
+    driver = None
+    posted_here = set(posted_state.get(account_id, []))
+    to_post = [g for g in groups if g not in posted_here]
+
+    if not to_post:
+        log.info(f"[{account_id}] Nothing new to post")
+        return
+
+    to_post = to_post[:POSTS_PER_ACCOUNT_LIMIT]
+
+    try:
+        log.info(f"[{account_id}] Session starting ({len(to_post)} groups)")
+        driver = get_driver_for_account(account_id, headless=HEADLESS)
+
+        if not inject_cookies(driver, account_id):
+            return
+        if not verify_logged_in(driver, account_id):
+            return
+
+        # Proof-of-login screenshot
+        try:
+            SCREENSHOTS_DIR.mkdir(exist_ok=True)
+            driver.save_screenshot(f"screenshots/{account_id}_poster_login.png")
+            log.info(f"[{account_id}] 📸 Screenshot saved")
+        except Exception:
+            pass
+
+        for group_url in to_post:
+            if post_to_group(driver, group_url, text, account_id):
+                posted_here.add(group_url)
+                posted_state[account_id] = sorted(posted_here)
+                save_posted_state(posted_state)
+            time.sleep(random.uniform(*GROUP_COOLDOWN))
+
+        log.info(f"[{account_id}] ✅ Session complete")
+
+    except Exception as e:
+        log.error(f"[{account_id}] Fatal: {e}")
+        log.debug(traceback.format_exc())
+    finally:
+        if driver:
+            try:
+                driver.quit()
+            except Exception:
+                pass
+
+
+# ===================================================================
+# MAIN
+# ===================================================================
+def main() -> None:
+    accounts = list_accounts()
+    groups = load_groups()
+    text = load_post_text()
+
+    if not accounts:
+        log.error("No cookies in cookies/ folder")
+        return
+    if not groups:
+        log.error("No groups in groups.txt")
+        return
+    if not text:
+        log.error("No post text in post.txt")
+        return
+
+    log.info(f"🚀 Starting — {len(accounts)} accounts, {len(groups)} groups, text: {len(text)} chars")
+    posted_state = load_posted_state()
+
+    for account_id in accounts:
+        try:
+            process_account(account_id, groups, text, posted_state)
+        except KeyboardInterrupt:
+            break
         except Exception as e:
-            log(f"❌ Fatal: {type(e).__name__}: {e}")
-            sys.exit(99)
-        finally:
-            ctx.close()
-            browser.close()
+            log.error(f"[{account_id}] Unhandled: {e}")
+            continue
+        time.sleep(random.uniform(*ACCOUNT_COOLDOWN))
+
+    log.info("🏁 Done — sleep well!")
 
 
 if __name__ == "__main__":

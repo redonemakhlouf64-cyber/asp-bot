@@ -171,6 +171,29 @@ def verify_logged_in(driver, account_id: str) -> bool:
 # ===================================================================
 # POST TO GROUP
 # ===================================================================
+def _is_blocked_or_redirect(driver) -> tuple[bool, str]:
+    """
+    Detect if Facebook redirected us to login/checkpoint instead of the group.
+    Returns (True, reason) if blocked, else (False, '').
+    """
+    try:
+        url = (driver.current_url or "").lower()
+    except Exception:
+        return False, ""
+    if "?next=" in url:
+        return True, "redirect_next"
+    for marker in ["/login", "/checkpoint", "/challenge", "/recover", "/help/contact"]:
+        if marker in url:
+            return True, f"redirect_{marker.strip('/')}"
+    try:
+        title = (driver.title or "").lower()
+    except Exception:
+        title = ""
+    if "log in" in title or "login" in title or "security check" in title:
+        return True, "login_title"
+    return False, ""
+
+
 def _save_stage_screenshot(driver, account_id: str, group_url: str, stage: str) -> None:
     """Save a screenshot named by account, group ID, and stage."""
     try:
@@ -349,6 +372,13 @@ def post_to_group(driver, group_url: str, text: str, account_id: str) -> bool:
 
         # 2. CAPTCHA (real ones only)
         solver.auto_handle(driver, account_name=account_id)
+
+        # 2.5 Check if Facebook redirected us to login/checkpoint
+        blocked, reason = _is_blocked_or_redirect(driver)
+        if blocked:
+            log.warning(f"[{account_id}] 🚫 BLOCKED ({reason}) — skipping: {group_url}")
+            _save_stage_screenshot(driver, account_id, group_url, f"blocked_{reason}")
+            return False
 
         # 3. Join if needed
         joined_now = _try_join_group(driver, account_id)

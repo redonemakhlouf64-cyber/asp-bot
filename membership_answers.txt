@@ -1,0 +1,68 @@
+# ==========================================
+# membership_answers.txt
+# Auto-answers for Facebook group membership questions
+# Format: KEYWORD_IN_QUESTION|ANSWER
+# The bot matches keywords case-insensitive
+# ==========================================
+
+# --- About your business/work ---
+business|I run an online business focused on digital marketing and ecommerce
+work|Digital marketer and online entrepreneur
+company|Self-employed online business owner
+job|Full-time online entrepreneur
+occupation|Digital marketer
+industry|Digital marketing and ecommerce
+
+# --- Rules & Agreement ---
+rules|Yes, I have read and fully agree to all group rules
+agree|Yes, I agree
+follow|Yes, I will follow all the rules
+respect|Yes, absolutely
+
+# --- Spam & Promotion ---
+spam|No, I will not spam the group
+promote|No, I am here to learn and network, not to promote
+sell|No, I am not here to sell anything
+advertis|No, I will not post any advertisements
+self-promotion|No, I understand self-promotion is not allowed
+
+# --- Why join ---
+why|To learn from experienced members and share valuable insights
+reason|Networking and learning from the community
+goal|To grow my knowledge and connect with like-minded people
+looking for|Networking, learning, and valuable discussions
+hope|To learn, contribute, and build meaningful connections
+
+# --- Location ---
+location|United States
+country|United States
+city|New York
+live|United States
+from|Based in the US
+
+# --- Experience ---
+experience|5+ years in digital marketing and online business
+years|5 years
+expert|Intermediate level with proven results
+beginner|No, I have solid experience
+skill|Digital marketing, SEO, content creation, ecommerce
+
+# --- Contact info ---
+email|I prefer to share via private message
+phone|Available upon request via DM
+website|Currently building a new one
+social|Active on LinkedIn and Instagram
+
+# --- Age/Gender ---
+age|30+
+adult|Yes, I am over 18
+
+# --- Generic yes/no fallbacks ---
+will you|Yes, absolutely
+do you|Yes
+have you|Yes
+are you|Yes
+can you|Yes
+
+# --- Default fallback (if no keyword matches) ---
+DEFAULT|Thank you for accepting my request. I look forward to being an active and valuable member of this community.

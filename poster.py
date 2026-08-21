@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-poster.py v7.3 - Facebook Poster via mbasic.facebook.com
-Uses the basic HTML version of Facebook for bulletproof posting.
-No JavaScript, no React, no CSS shenanigans.
+poster.py v7.4 - Facebook Poster via m.facebook.com (mtouch)
+Smart element enumeration with multiple fallback selectors.
 """
 
 import os
@@ -54,12 +53,10 @@ FB_COOKIES = os.environ.get("FB_COOKIES_" + str(ACC_NUM), "").strip()
 CONTENT_RAW = os.environ.get("CONTENT", "").strip()
 FORCE_ALL = os.environ.get("FORCE_ALL", "").lower() in ("true", "1", "yes")
 
-# Use mbasic (basic HTML) for reliable posting
-MBASIC_HOME = "https://mbasic.facebook.com/"
-MBASIC_COMPOSER = "https://mbasic.facebook.com/composer/mbasic/"
+MFB_HOME = "https://m.facebook.com/"
+MFB_COMPOSER = "https://m.facebook.com/composer/"
 
-# Use a mobile UA for mbasic (it's the mobile basic version)
-MBASIC_UA = ("Mozilla/5.0 (Linux; Android 10; SM-G970F) "
+MOBILE_UA = ("Mozilla/5.0 (Linux; Android 10; SM-G970F) "
              "AppleWebKit/537.36 (KHTML, like Gecko) "
              "Chrome/120.0.0.0 Mobile Safari/537.36")
 
@@ -85,9 +82,9 @@ def pick_content():
 
 
 def verify_login(page):
-    log("STEP 1/3: Verify session on mbasic.facebook.com")
+    log("STEP 1/3: Verify session on m.facebook.com")
     try:
-        page.goto(MBASIC_HOME, wait_until="domcontentloaded", timeout=60000)
+        page.goto(MFB_HOME, wait_until="domcontentloaded", timeout=60000)
     except Exception as e:
         log("❌ goto failed: " + str(e))
         return False
@@ -104,7 +101,7 @@ def verify_login(page):
     cookies_now = page.context.cookies()
     c_user = next((c for c in cookies_now if c.get("name") == "c_user"), None)
     if not c_user:
-        log("❌ Missing c_user after navigation")
+        log("❌ Missing c_user")
         snapshot(page, "01_no_cuser")
         return False
 
@@ -112,14 +109,33 @@ def verify_login(page):
     return True
 
 
-def open_composer(page):
-    log("STEP 2/3: Navigate to mbasic composer")
+def enumerate_page(page, label):
+    """Debug: log counts of interactive elements."""
     try:
-        page.goto(MBASIC_COMPOSER, wait_until="domcontentloaded", timeout=60000)
+        n_textarea = page.locator("textarea").count()
+        n_input = page.locator("input").count()
+        n_button = page.locator("button").count()
+        n_editable = page.locator("[contenteditable='true']").count()
+        n_textbox = page.locator("[role='textbox']").count()
+        log("🔍 Page (" + label + "): textareas=" + str(n_textarea) +
+            ", inputs=" + str(n_input) +
+            ", buttons=" + str(n_button) +
+            ", contenteditable=" + str(n_editable) +
+            ", role=textbox=" + str(n_textbox))
+    except Exception as e:
+        log("enumerate error: " + str(e))
+
+
+def open_composer(page):
+    log("STEP 2/3: Navigate to m.facebook.com composer")
+    try:
+        page.goto(MFB_COMPOSER, wait_until="domcontentloaded", timeout=60000)
     except Exception as e:
         log("❌ composer goto failed: " + str(e))
         return False
-    time.sleep(random.uniform(2, 4))
+
+    # Wait longer for the composer to load
+    time.sleep(random.uniform(5, 7))
 
     url = page.url
     log("Composer URL: " + url)
@@ -129,64 +145,73 @@ def open_composer(page):
         snapshot(page, "02_composer_login")
         return False
 
-    # Check for the textarea
-    textarea_sels = [
-        "textarea[name='xc_message']",
-        "textarea[placeholder*=\"What's on your mind\"]",
-        "textarea",
-    ]
-    for sel in textarea_sels:
-        try:
-            ta = page.locator(sel).first
-            ta.wait_for(state="visible", timeout=8000)
-            log("✅ Composer textarea found: " + sel)
-            return True
-        except Exception:
-            continue
-
-    log("❌ No textarea on composer page")
-    snapshot(page, "02_no_textarea")
-    return False
+    enumerate_page(page, "composer")
+    snapshot(page, "02_composer_loaded")
+    return True
 
 
 def publish_post(page, text):
-    log("STEP 3/3: Type content and submit")
+    log("STEP 3/3: Fill content and submit")
     if not text:
         log("❌ No content")
         return False
 
-    # Fill the textarea
-    textarea_sels = [
-        "textarea[name='xc_message']",
-        "textarea[placeholder*=\"What's on your mind\"]",
-        "textarea",
+    # Try to find text input (many possible selectors for m.facebook.com)
+    text_sels = [
+        "textarea[name='xc_message']",       # mbasic legacy
+        "textarea[placeholder*='mind']",     # placeholder hint
+        "textarea",                          # any textarea
+        "[contenteditable='true']",          # newer composer
+        "div[role='textbox']",               # ARIA textbox
+        "[data-sigil*='composer']",          # mtouch sigil
     ]
+
     filled = False
-    for sel in textarea_sels:
+    used_sel = None
+    for sel in text_sels:
         try:
-            ta = page.locator(sel).first
-            ta.wait_for(state="visible", timeout=5000)
-            ta.fill(text)
+            el = page.locator(sel).first
+            el.wait_for(state="visible", timeout=6000)
+            # Try fill first (works for textarea/input), fallback to type
+            try:
+                el.fill(text)
+            except Exception:
+                el.click()
+                time.sleep(0.5)
+                el.type(text, delay=random.randint(20, 50))
             filled = True
+            used_sel = sel
             log("✅ Content filled (" + str(len(text)) + " chars) via " + sel)
             break
         except Exception:
             continue
+
     if not filled:
-        log("❌ Could not fill textarea")
+        log("❌ Could not fill any text input")
+        # Debug: dump HTML preview
+        try:
+            html = page.content()[:2000]
+            log("📄 HTML preview: " + html.replace("\n", " ")[:800])
+        except Exception:
+            pass
         snapshot(page, "03_no_textarea_fill")
         return False
 
     time.sleep(random.uniform(1, 2))
-    snapshot(page, "03_before_submit")
+    snapshot(page, "03_after_fill")
 
-    # Click submit (Post button)
+    # Try to find submit button
     submit_sels = [
-        "input[type='submit'][name='view_post']",
-        "input[type='submit'][value='Post']",
-        "input[type='submit']",
+        "button[name='view_post']",
+        "input[name='view_post']",
         "button[type='submit']",
+        "input[type='submit']",
+        "button:has-text('Post')",
+        "[aria-label='Post'][role='button']",
+        "[data-sigil*='composer-submit']",
+        "a:has-text('Post')",
     ]
+
     submitted = False
     for sel in submit_sels:
         try:
@@ -198,13 +223,14 @@ def publish_post(page, text):
             break
         except Exception:
             continue
+
     if not submitted:
-        log("❌ Could not click submit")
+        log("❌ Could not find submit button")
         snapshot(page, "03_no_submit")
         return False
 
-    # Wait for redirect back to home (success indicator)
-    time.sleep(random.uniform(4, 6))
+    # Wait for redirect (success indicator)
+    time.sleep(random.uniform(5, 8))
     snapshot(page, "04_after_submit")
 
     final_url = page.url
@@ -212,9 +238,8 @@ def publish_post(page, text):
 
     if "composer" in final_url.lower():
         log("⚠️  Still on composer page — post may have failed")
-        # Check for error messages
         try:
-            body_text = page.locator("body").inner_text()[:500]
+            body_text = page.locator("body").inner_text()[:400]
             log("Page text: " + body_text.replace("\n", " | "))
         except Exception:
             pass
@@ -226,7 +251,7 @@ def publish_post(page, text):
 
 def run():
     log("=" * 50)
-    log("poster.py v7.3 (mbasic.facebook.com - bulletproof)")
+    log("poster.py v7.4 (m.facebook.com smart mtouch)")
     log("Account: #" + str(ACC_NUM) + " | force_all=" + str(FORCE_ALL))
     log("=" * 50)
 
@@ -267,7 +292,7 @@ def run():
         )
         try:
             context = browser.new_context(
-                user_agent=MBASIC_UA,
+                user_agent=MOBILE_UA,
                 viewport={"width": 412, "height": 915},
                 is_mobile=True,
                 has_touch=True,

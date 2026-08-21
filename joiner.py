@@ -18,7 +18,16 @@ from playwright.sync_api import sync_playwright
 # ============ الإعدادات ============
 ACCOUNT_NUM = int(os.environ.get("ACCOUNT_NUM", "1"))
 FB_COOKIES = os.environ.get(f"FB_COOKIES_{ACCOUNT_NUM}", "")
-MAX_JOINS_PER_RUN = int(os.environ.get("MAX_JOINS", "5"))  # حد آمن
+
+# 🎯 نظام الدُفعات (Batch Mode)
+BATCH_SIZE = int(os.environ.get("BATCH_SIZE", "30"))          # عدد الجروبات في الدفعة
+BATCHES_PER_RUN = int(os.environ.get("BATCHES", "2"))          # عدد الدفعات
+JOIN_DELAY_MIN = int(os.environ.get("JOIN_DELAY_MIN", "100"))  # ثانية
+JOIN_DELAY_MAX = int(os.environ.get("JOIN_DELAY_MAX", "140"))  # ثانية (متوسط ~2 دقيقة)
+BATCH_PAUSE_MIN = int(os.environ.get("BATCH_PAUSE_MIN", "1800"))  # 30 دقيقة
+BATCH_PAUSE_MAX = int(os.environ.get("BATCH_PAUSE_MAX", "2400"))  # 40 دقيقة
+
+MAX_JOINS_PER_RUN = BATCH_SIZE * BATCHES_PER_RUN  # الإجمالي (افتراضي 60)
 
 MBASIC = "https://mbasic.facebook.com"
 KEYWORDS_FILE = Path("keywords.txt")
@@ -241,21 +250,29 @@ def main():
             log("✅ Session valid")
 
             joins_done = 0
+            current_batch = 0
+            batch_joins = 0
             random.shuffle(keywords)
 
+            log(f"🎯 Plan: {BATCHES_PER_RUN} batches × {BATCH_SIZE} joins = {MAX_JOINS_PER_RUN} total")
+            log(f"⏱️ Delay: {JOIN_DELAY_MIN}-{JOIN_DELAY_MAX}s between joins")
+            log(f"☕ Pause: {BATCH_PAUSE_MIN//60}-{BATCH_PAUSE_MAX//60} min between batches")
+
+            def flush_stop():
+                return joins_done >= MAX_JOINS_PER_RUN
+
             for keyword in keywords:
-                if joins_done >= MAX_JOINS_PER_RUN:
-                    log(f"🛑 Reached max joins ({MAX_JOINS_PER_RUN})")
+                if flush_stop():
                     break
 
                 try:
-                    candidates = search_groups_by_keyword(page, keyword, limit=5)
+                    candidates = search_groups_by_keyword(page, keyword, limit=10)
                 except Exception as e:
                     log(f"⚠️ Search error: {e}")
                     continue
 
                 for gid in candidates:
-                    if joins_done >= MAX_JOINS_PER_RUN:
+                    if flush_stop():
                         break
                     if gid in existing:
                         log(f"  ⏭️ {gid} already in groups.txt")
@@ -266,9 +283,21 @@ def main():
                         stats["skipped"].append(gid)
                         continue
 
-                    # انتظار عشوائي (30-90 ثانية بين محاولات الانضمام)
-                    delay = random.randint(30, 90)
-                    log(f"⏳ sleep {delay}s")
+                    # 🎯 إدارة الدُفعات: هل انتهت الدفعة الحالية؟
+                    if batch_joins >= BATCH_SIZE:
+                        current_batch += 1
+                        if current_batch >= BATCHES_PER_RUN:
+                            log(f"🛑 All {BATCHES_PER_RUN} batches done")
+                            break
+                        pause = random.randint(BATCH_PAUSE_MIN, BATCH_PAUSE_MAX)
+                        log(f"☕ Batch {current_batch} done. Resting {pause//60} min...")
+                        time.sleep(pause)
+                        batch_joins = 0
+                        log(f"🚀 Starting batch {current_batch + 1}/{BATCHES_PER_RUN}")
+
+                    # انتظار بين الانضمامات (~2 دقيقة)
+                    delay = random.randint(JOIN_DELAY_MIN, JOIN_DELAY_MAX)
+                    log(f"⏳ sleep {delay}s ({joins_done+1}/{MAX_JOINS_PER_RUN})")
                     time.sleep(delay)
 
                     try:
@@ -282,9 +311,11 @@ def main():
                     if result == "joined":
                         stats["joined"].append(gid)
                         joins_done += 1
+                        batch_joins += 1
                     elif result == "pending":
                         stats["pending"].append(gid)
                         joins_done += 1
+                        batch_joins += 1
                     elif result == "already":
                         stats["skipped"].append(gid)
                     else:

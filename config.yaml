@@ -1,0 +1,87 @@
+# ==========================================
+# config.yaml - Central bot configuration
+# ==========================================
+
+bot:
+  name: "ASP Auto Bot"
+  version: "2.0"
+  debug_mode: false
+  headless: true
+  log_level: "INFO"
+
+facebook:
+  base_url: "https://www.facebook.com"
+  mobile_url: "https://m.facebook.com"
+  login_timeout: 30
+  page_load_timeout: 45
+  use_mobile_version: false
+
+joining:
+  enabled: true
+  sources:
+    - groups.txt
+    - fallback_groups.txt
+  max_pending_requests: 20
+  retry_failed_after_days: 7
+  auto_answer_questions: true
+  answers_file: membership_answers.txt
+  blacklist_file: blacklist.txt
+  max_attempts_per_group: 3
+
+posting:
+  enabled: true
+  templates_file: posting_templates.txt
+  content_file: content.txt
+  hashtags_file: hashtags.txt
+  add_random_emoji: true
+  min_hashtags: 3
+  max_hashtags: 5
+  add_images: false
+  image_folder: "images/"
+
+discovery:
+  enabled: true
+  keywords_file: keywords.txt
+  min_members: 5000
+  max_members: 500000
+  prefer_public: true
+  languages: ["en"]
+  countries: ["US", "UK", "CA", "AU", "NZ", "IE"]
+
+safety:
+  human_delay_min_seconds: 3
+  human_delay_max_seconds: 12
+  scroll_before_action: true
+  random_mouse_movement: true
+  screenshot_on_error: true
+  stop_on_captcha: true
+  stop_on_checkpoint: true
+  user_agents_file: user_agents.txt
+  rotate_user_agent: true
+
+schedule:
+  schedule_file: schedule.json
+  respect_timezone: true
+  daily_summary_time: "22:00"
+
+notifications:
+  telegram:
+    enabled: false
+    bot_token: "${TELEGRAM_BOT_TOKEN}"
+    chat_id: "${TELEGRAM_CHAT_ID}"
+    notify_on:
+      - join_success
+      - post_success
+      - error
+      - daily_summary
+  email:
+    enabled: false
+    smtp_server: "smtp.gmail.com"
+    smtp_port: 587
+
+storage:
+  state_folder: "state/"
+  logs_folder: "logs/"
+  screenshots_folder: "screenshots/"
+  backup_enabled: true
+  backup_frequency_hours: 24

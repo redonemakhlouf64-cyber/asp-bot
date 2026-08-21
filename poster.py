@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
-poster.py v8.0 — mbasic edition
-يتجاوز مشكلة 'Utiliser l'application Facebook'
+poster.py v8.1 — mbasic edition (asp-bot compatible)
+- يقرأ groups.txt من جذر المستودع
+- يستخدم home.php للنشر على الحائط (أكثر استقراراً)
+- selectors احتياطية متعددة
 """
 
 import os
@@ -9,6 +11,7 @@ import sys
 import json
 import time
 import random
+from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 # ============ الإعدادات ============
@@ -16,7 +19,16 @@ ACCOUNT_NUM = int(os.environ.get("ACCOUNT_NUM", "1"))
 CONTENT = os.environ.get("CONTENT", "").strip()
 FB_COOKIES = os.environ.get(f"FB_COOKIES_{ACCOUNT_NUM}", "")
 FORCE_ALL = os.environ.get("FORCE_ALL", "false").lower() == "true"
-GROUP_IDS = [g.strip() for g in os.environ.get("GROUP_IDS", "").split(",") if g.strip()]
+
+# قراءة الجروبات من groups.txt (سطر لكل ID)
+def load_groups():
+    p = Path("groups.txt")
+    if not p.exists():
+        return []
+    lines = p.read_text(encoding="utf-8").splitlines()
+    return [ln.strip() for ln in lines if ln.strip() and not ln.strip().startswith("#")]
+
+GROUP_IDS = load_groups()
 
 MBASIC = "https://mbasic.facebook.com"
 
@@ -61,15 +73,58 @@ def parse_cookies(cookie_str):
     return cookies
 
 
+def find_composer_textarea(page):
+    """يجرّب عدة selectors لإيجاد textarea التأليف."""
+    selectors = [
+        "textarea[name='xc_message']",
+        "textarea[name='status']",
+        "textarea[placeholder*='penses']",   # FR: À quoi penses-tu?
+        "textarea[placeholder*='thinking']", # EN
+        "textarea[placeholder*='تفكر']",     # AR
+        "textarea",
+    ]
+    for sel in selectors:
+        el = page.query_selector(sel)
+        if el:
+            log(f"  ↳ textarea found via: {sel}")
+            return el
+    return None
+
+
 def post_to_wall(page):
     log("📝 Posting to personal wall...")
-    page.goto(f"{MBASIC}/composer/", timeout=30000, wait_until="domcontentloaded")
-    page.screenshot(path="debug_wall_composer.png")
+    # جرّب 3 URLs مختلفة للحائط
+    urls_to_try = [
+        f"{MBASIC}/home.php",
+        f"{MBASIC}/",
+        f"{MBASIC}/composer/",
+    ]
+    textarea = None
+    for url in urls_to_try:
+        log(f"  → Trying {url}")
+        page.goto(url, timeout=30000, wait_until="domcontentloaded")
+        page.screenshot(path=f"debug_wall_{url.rsplit('/',1)[-1] or 'home'}.png")
+        textarea = find_composer_textarea(page)
+        if textarea:
+            log(f"  ✅ textarea available at {url}")
+            break
+        # ابحث عن رابط "What's on your mind" واضغطه
+        link = (page.query_selector("a[href*='composer']")
+                or page.query_selector("a:has-text('penses')")
+                or page.query_selector("a:has-text('mind')"))
+        if link:
+            log("  → Clicking composer link...")
+            link.click()
+            page.wait_for_load_state("domcontentloaded", timeout=30000)
+            textarea = find_composer_textarea(page)
+            if textarea:
+                break
 
-    textarea = (page.query_selector("textarea[name='xc_message']")
-                or page.query_selector("textarea"))
     if not textarea:
-        log("❌ No textarea in wall composer")
+        log("❌ No textarea in wall composer (tried all URLs)")
+        # اطبع HTML للتشخيص
+        html_preview = page.content()[:3000]
+        log(f"HTML preview:\n{html_preview}")
         return False
 
     textarea.fill(CONTENT)
@@ -98,16 +153,16 @@ def post_to_group(page, group_id):
     log(f"👥 Posting to group {group_id}...")
     page.goto(f"{MBASIC}/groups/{group_id}", timeout=30000, wait_until="domcontentloaded")
 
-    # اضغط على 'Write something'
+    # اضغط على 'Write something' بلغات متعددة
     link = (page.query_selector("a:has-text('Write')")
             or page.query_selector("a:has-text('Écrire')")
-            or page.query_selector("a:has-text('اكتب')"))
+            or page.query_selector("a:has-text('اكتب')")
+            or page.query_selector("a[href*='composer']"))
     if link:
         link.click()
         page.wait_for_load_state("domcontentloaded", timeout=30000)
 
-    textarea = (page.query_selector("textarea[name='xc_message']")
-                or page.query_selector("textarea"))
+    textarea = find_composer_textarea(page)
     if not textarea:
         log(f"❌ No textarea in group {group_id}")
         page.screenshot(path=f"debug_group_{group_id}_fail.png")

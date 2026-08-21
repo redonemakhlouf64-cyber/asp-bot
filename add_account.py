@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-add_account.py v7.0 - Cookies-Only Verifier
-No email, no password, no 2FA, no proxy.
-Verifies FB_COOKIES_N secrets are valid and working.
+add_account.py v7.1 - Cookies-Only Verifier (Mobile UA)
+Matches Kiwi Browser mobile origin of the cookies.
 """
 
 import os
@@ -13,11 +12,10 @@ from playwright.sync_api import sync_playwright
 
 
 def log(msg):
-    print(f"[add_account] {msg}", flush=True)
+    print("[add_account] " + str(msg), flush=True)
 
 
 def _normalize_cookies(cookies):
-    """Convert browser cookies (Firefox/Chrome) to Playwright format."""
     ss_map = {"lax": "Lax", "strict": "Strict",
               "none": "None", "no_restriction": "None"}
     allowed = {"name", "value", "domain", "path", "expires",
@@ -40,9 +38,12 @@ def _normalize_cookies(cookies):
     return out
 
 
-DESKTOP_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-              "AppleWebKit/537.36 (KHTML, like Gecko) "
-              "Chrome/120.0.0.0 Safari/537.36")
+FB_HOME = "https://m.facebook.com/"
+
+# Mobile UA matching Kiwi Browser
+MOBILE_UA = ("Mozilla/5.0 (Linux; Android 13; SM-G998B) "
+             "AppleWebKit/537.36 (KHTML, like Gecko) "
+             "Chrome/120.0.0.0 Mobile Safari/537.36")
 
 STEALTH_JS = """
 Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
@@ -54,27 +55,27 @@ window.chrome = {runtime: {}};
 
 def verify_account(acc_num):
     """Verify cookies for a single account. Returns True/False/None."""
-    log(f"--- Verifying account #{acc_num} ---")
-    fb_cookies = os.environ.get(f"FB_COOKIES_{acc_num}", "").strip()
+    log("--- Verifying account #" + str(acc_num) + " ---")
+    fb_cookies = os.environ.get("FB_COOKIES_" + str(acc_num), "").strip()
     if not fb_cookies:
-        log(f"⏭️  FB_COOKIES_{acc_num} not set. Skipping.")
+        log("⏭️  FB_COOKIES_" + str(acc_num) + " not set. Skipping.")
         return None
 
     try:
         cookies_raw = json.loads(fb_cookies)
     except Exception as e:
-        log(f"❌ FB_COOKIES_{acc_num} invalid JSON: {e}")
+        log("❌ FB_COOKIES_" + str(acc_num) + " invalid JSON: " + str(e))
         return False
 
     has_c_user = any(c.get("name") == "c_user" for c in cookies_raw)
     has_xs = any(c.get("name") == "xs" for c in cookies_raw)
-    log(f"🔍 c_user present: {has_c_user} | xs present: {has_xs}")
+    log("🔍 c_user present: " + str(has_c_user) + " | xs present: " + str(has_xs))
     if not has_c_user or not has_xs:
         log("❌ Missing essential cookies (c_user or xs)")
         return False
 
     cookies = _normalize_cookies(cookies_raw)
-    log(f"🍪 Loaded {len(cookies)} cookies")
+    log("🍪 Loaded " + str(len(cookies)) + " cookies (of " + str(len(cookies_raw)) + " input)")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(
@@ -87,8 +88,11 @@ def verify_account(acc_num):
         )
         try:
             context = browser.new_context(
-                user_agent=DESKTOP_UA,
-                viewport={"width": 1366, "height": 768},
+                user_agent=MOBILE_UA,
+                viewport={"width": 412, "height": 915},
+                device_scale_factor=2.6,
+                is_mobile=True,
+                has_touch=True,
                 locale="en-US",
             )
             context.add_init_script(STEALTH_JS)
@@ -96,24 +100,26 @@ def verify_account(acc_num):
             page = context.new_page()
 
             try:
-                page.goto("https://www.facebook.com/",
-                          wait_until="domcontentloaded", timeout=60000)
+                page.goto(FB_HOME, wait_until="domcontentloaded", timeout=60000)
                 time.sleep(5)
                 url = page.url
-                log(f"URL: {url}")
+                title = page.title()
+                log("URL: " + url)
+                log("Title: " + title)
 
                 if "login" in url.lower() or "checkpoint" in url.lower():
                     log("❌ Cookies rejected — redirected to login/checkpoint")
                     try:
                         page.screenshot(
-                            path=f"verify_acc{acc_num}_fail.png",
+                            path="verify_acc" + str(acc_num) + "_fail.png",
                             full_page=True)
-                        log(f"📸 Saved: verify_acc{acc_num}_fail.png")
+                        log("📸 Saved: verify_acc" + str(acc_num) + "_fail.png")
                     except Exception:
                         pass
                     return False
 
                 cookies_now = page.context.cookies()
+                log("📊 Cookies in context now: " + str(len(cookies_now)))
                 c_user_now = next(
                     (c for c in cookies_now if c.get("name") == "c_user"),
                     None)
@@ -121,17 +127,17 @@ def verify_account(acc_num):
                     log("❌ c_user missing after navigation (session invalid)")
                     try:
                         page.screenshot(
-                            path=f"verify_acc{acc_num}_fail.png",
+                            path="verify_acc" + str(acc_num) + "_fail.png",
                             full_page=True)
-                        log(f"📸 Saved: verify_acc{acc_num}_fail.png")
+                        log("📸 Saved: verify_acc" + str(acc_num) + "_fail.png")
                     except Exception:
                         pass
                     return False
 
-                log(f"✅ Account #{acc_num} verified! User ID: {c_user_now.get('value')}")
+                log("✅ Account #" + str(acc_num) + " verified! User ID: " + str(c_user_now.get("value")))
                 return True
             except Exception as e:
-                log(f"❌ Verification error: {e}")
+                log("❌ Verification error: " + str(e))
                 return False
         finally:
             browser.close()
@@ -139,14 +145,14 @@ def verify_account(acc_num):
 
 def main():
     log("=" * 50)
-    log("add_account.py v7.0 (cookies-only verifier)")
+    log("add_account.py v7.1 (cookies-only, mobile UA)")
     log("=" * 50)
 
     ok = []
     bad = []
     skip = []
 
-    for i in range(1, 11):  # check up to 10 accounts
+    for i in range(1, 11):
         result = verify_account(i)
         if result is True:
             ok.append(i)
@@ -156,11 +162,11 @@ def main():
             skip.append(i)
 
     log("=" * 50)
-    log(f"Summary: ✅ OK={len(ok)} | ❌ Bad={len(bad)} | ⏭️  Skipped={len(skip)}")
+    log("Summary: ✅ OK=" + str(len(ok)) + " | ❌ Bad=" + str(len(bad)) + " | ⏭️  Skipped=" + str(len(skip)))
     if ok:
-        log(f"  ✅ Valid accounts: {ok}")
+        log("  ✅ Valid accounts: " + str(ok))
     if bad:
-        log(f"  ❌ Invalid accounts: {bad}")
+        log("  ❌ Invalid accounts: " + str(bad))
     log("=" * 50)
 
     return 1 if bad else 0

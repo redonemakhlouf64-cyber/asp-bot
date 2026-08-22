@@ -1,2 +1,3 @@
-2026/08/21-18:35:16.598 f42 Creating DB /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/GCM Store since it was missing.
-2026/08/21-18:35:16.600 f42 Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/GCM Store/MANIFEST-000001
+2026/08/22-03:10:33.336 e6f Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/GCM Store/MANIFEST-000001
+2026/08/22-03:10:33.336 e6f Recovering log #3
+2026/08/22-03:10:33.337 e6f Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/GCM Store/000003.log 

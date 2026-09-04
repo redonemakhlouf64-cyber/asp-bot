@@ -1,3 +1,3 @@
-2026/09/04-08:13:24.884 e09 Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Sync Data/LevelDB/MANIFEST-000001
-2026/09/04-08:13:25.065 e09 Recovering log #3
-2026/09/04-08:13:25.065 e09 Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Sync Data/LevelDB/000003.log 
+2026/09/04-16:12:30.780 ecf Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Sync Data/LevelDB/MANIFEST-000001
+2026/09/04-16:12:30.789 ecf Recovering log #3
+2026/09/04-16:12:30.789 ecf Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Sync Data/LevelDB/000003.log 

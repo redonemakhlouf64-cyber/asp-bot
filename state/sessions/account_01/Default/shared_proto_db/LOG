@@ -1,3 +1,3 @@
-2026/09/07-00:19:29.440 efa Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/shared_proto_db/MANIFEST-000001
-2026/09/07-00:19:29.440 efa Recovering log #4
-2026/09/07-00:19:29.440 efa Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/shared_proto_db/000004.log 
+2026/09/07-08:13:50.664 edb Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/shared_proto_db/MANIFEST-000001
+2026/09/07-08:13:50.664 edb Recovering log #4
+2026/09/07-08:13:50.664 edb Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/shared_proto_db/000004.log 

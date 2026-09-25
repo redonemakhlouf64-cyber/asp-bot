@@ -1,3 +1,3 @@
-2026/09/25-03:46:37.786 e83 Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/shared_proto_db/metadata/MANIFEST-000001
-2026/09/25-03:46:37.786 e83 Recovering log #3
-2026/09/25-03:46:37.786 e83 Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/shared_proto_db/metadata/000003.log 
+2026/09/25-13:18:38.856 ec3 Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/shared_proto_db/metadata/MANIFEST-000001
+2026/09/25-13:18:38.857 ec3 Recovering log #3
+2026/09/25-13:18:38.857 ec3 Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/shared_proto_db/metadata/000003.log 

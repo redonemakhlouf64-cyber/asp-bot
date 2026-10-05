@@ -1,3 +1,15 @@
-2026/10/04-13:45:28.612 e79 Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Session Storage/MANIFEST-000001
-2026/10/04-13:45:28.612 e79 Recovering log #16
-2026/10/04-13:45:28.613 e79 Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Session Storage/000016.log 
+2026/10/04-19:15:30.013 f57 Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Session Storage/MANIFEST-000001
+2026/10/04-19:15:30.014 f57 Recovering log #16
+2026/10/04-19:15:30.014 f57 Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Session Storage/000016.log 
+2026/10/04-19:16:30.019 f59 Level-0 table #20: started
+2026/10/04-19:16:30.020 f59 Level-0 table #20: 9057 bytes OK
+2026/10/04-19:16:30.021 f59 Delete type=0 #16
+2026/10/04-19:16:30.022 f59 Compacting 4@0 + 1@1 files
+2026/10/04-19:16:30.023 f59 Generated table #21@0: 2107 keys, 32571 bytes
+2026/10/04-19:16:30.023 f59 Compacted 4@0 + 1@1 files => 32571 bytes
+2026/10/04-19:16:30.024 f59 compacted to: files[ 0 1 1 0 0 0 0 ]
+2026/10/04-19:16:30.024 f59 Delete type=2 #20
+2026/10/04-19:16:30.025 f59 Delete type=2 #8
+2026/10/04-19:16:30.025 f59 Delete type=2 #14
+2026/10/04-19:16:30.025 f59 Delete type=2 #17
+2026/10/04-19:16:30.025 f59 Delete type=2 #11

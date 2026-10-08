@@ -1,15 +1,3 @@
-2026/10/08-15:16:35.198 f1a Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Local Storage/leveldb/MANIFEST-000001
-2026/10/08-15:16:35.199 f1a Recovering log #94
-2026/10/08-15:16:35.200 f1a Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Local Storage/leveldb/000094.log 
-2026/10/08-15:43:40.283 f1c Level-0 table #98: started
-2026/10/08-15:43:40.285 f1c Level-0 table #98: 8419 bytes OK
-2026/10/08-15:43:40.286 f1c Delete type=0 #94
-2026/10/08-15:43:40.286 f1c Compacting 4@0 + 1@1 files
-2026/10/08-15:43:40.289 f1c Generated table #99@0: 4908 keys, 85824 bytes
-2026/10/08-15:43:40.289 f1c Compacted 4@0 + 1@1 files => 85824 bytes
-2026/10/08-15:43:40.290 f1c compacted to: files[ 0 1 1 0 0 0 0 ]
-2026/10/08-15:43:40.290 f1c Delete type=2 #86
-2026/10/08-15:43:40.290 f1c Delete type=2 #98
-2026/10/08-15:43:40.290 f1c Delete type=2 #89
-2026/10/08-15:43:40.290 f1c Delete type=2 #92
-2026/10/08-15:43:40.290 f1c Delete type=2 #95
+2026/10/08-21:04:29.871 e44 Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Local Storage/leveldb/MANIFEST-000001
+2026/10/08-21:04:29.871 e44 Recovering log #97
+2026/10/08-21:04:29.872 e44 Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Local Storage/leveldb/000097.log 

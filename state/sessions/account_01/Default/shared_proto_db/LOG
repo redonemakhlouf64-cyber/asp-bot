@@ -1,6 +1,3 @@
-2026/10/21-13:30:27.257 e2e Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/shared_proto_db/MANIFEST-000001
-2026/10/21-13:30:27.257 e2e Recovering log #13
-2026/10/21-13:30:27.259 e2e Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/shared_proto_db/000013.log 
-2026/10/21-13:30:39.162 e30 Level-0 table #17: started
-2026/10/21-13:30:39.164 e30 Level-0 table #17: 106997 bytes OK
-2026/10/21-13:30:39.164 e30 Delete type=0 #13
+2026/10/21-19:57:08.327 efc Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/shared_proto_db/MANIFEST-000001
+2026/10/21-19:57:08.328 efc Recovering log #16
+2026/10/21-19:57:08.328 efc Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/shared_proto_db/000016.log 

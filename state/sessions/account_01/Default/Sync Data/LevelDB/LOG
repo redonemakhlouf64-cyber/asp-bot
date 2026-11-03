@@ -1,3 +1,3 @@
-2026/11/03-05:38:09.715 d3d Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Sync Data/LevelDB/MANIFEST-000001
-2026/11/03-05:38:09.719 d3d Recovering log #3
-2026/11/03-05:38:09.719 d3d Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Sync Data/LevelDB/000003.log 
+2026/11/03-15:54:52.727 e1b Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Sync Data/LevelDB/MANIFEST-000001
+2026/11/03-15:54:52.728 e1b Recovering log #3
+2026/11/03-15:54:52.728 e1b Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Sync Data/LevelDB/000003.log 

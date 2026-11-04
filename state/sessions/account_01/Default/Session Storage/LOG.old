@@ -1,3 +1,15 @@
-2026/11/04-05:06:48.941 d76 Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Session Storage/MANIFEST-000001
-2026/11/04-05:06:48.942 d76 Recovering log #29
-2026/11/04-05:06:48.943 d76 Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Session Storage/000029.log 
+2026/11/04-15:59:28.359 e3e Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Session Storage/MANIFEST-000001
+2026/11/04-15:59:28.363 e3e Recovering log #29
+2026/11/04-15:59:28.364 e3e Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Session Storage/000029.log 
+2026/11/04-16:21:21.615 e45 Level-0 table #33: started
+2026/11/04-16:21:21.616 e45 Level-0 table #33: 9022 bytes OK
+2026/11/04-16:21:21.617 e45 Delete type=0 #29
+2026/11/04-16:21:21.618 e3e Compacting 4@0 + 1@1 files
+2026/11/04-16:21:21.620 e3e Generated table #34@0: 3790 keys, 58679 bytes
+2026/11/04-16:21:21.620 e3e Compacted 4@0 + 1@1 files => 58679 bytes
+2026/11/04-16:21:21.620 e3e compacted to: files[ 0 1 1 0 0 0 0 ]
+2026/11/04-16:21:21.621 e3e Delete type=2 #24
+2026/11/04-16:21:21.621 e3e Delete type=2 #21
+2026/11/04-16:21:21.621 e3e Delete type=2 #27
+2026/11/04-16:21:21.621 e3e Delete type=2 #30
+2026/11/04-16:21:21.621 e3e Delete type=2 #33

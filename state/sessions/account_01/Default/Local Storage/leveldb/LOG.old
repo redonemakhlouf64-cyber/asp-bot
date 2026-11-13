@@ -1,3 +1,6 @@
-2026/11/12-16:37:46.026 e4a Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Local Storage/leveldb/MANIFEST-000001
-2026/11/12-16:37:46.027 e4a Recovering log #162
-2026/11/12-16:37:46.028 e4a Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Local Storage/leveldb/000162.log 
+2026/11/13-05:26:07.538 1010 Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Local Storage/leveldb/MANIFEST-000001
+2026/11/13-05:26:07.538 1010 Recovering log #162
+2026/11/13-05:26:07.539 1010 Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Local Storage/leveldb/000162.log 
+2026/11/13-05:50:56.944 1016 Level-0 table #167: started
+2026/11/13-05:50:56.945 1016 Level-0 table #167: 8204 bytes OK
+2026/11/13-05:50:56.946 1016 Delete type=0 #162

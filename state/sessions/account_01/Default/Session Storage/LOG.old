@@ -1,3 +1,6 @@
-2026/11/13-15:57:22.231 d93 Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Session Storage/MANIFEST-000001
-2026/11/13-15:57:22.233 d93 Recovering log #32
-2026/11/13-15:57:22.235 d93 Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Session Storage/000032.log 
+2026/11/13-21:51:07.927 e60 Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Session Storage/MANIFEST-000001
+2026/11/13-21:51:07.928 e60 Recovering log #32
+2026/11/13-21:51:07.929 e60 Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Session Storage/000032.log 
+2026/11/13-22:18:59.439 e64 Level-0 table #37: started
+2026/11/13-22:18:59.440 e64 Level-0 table #37: 8980 bytes OK
+2026/11/13-22:18:59.441 e64 Delete type=0 #32

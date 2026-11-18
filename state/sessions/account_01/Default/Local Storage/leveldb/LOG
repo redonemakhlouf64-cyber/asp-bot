@@ -1,3 +1,15 @@
-2026/11/18-06:13:04.913 d90 Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Local Storage/leveldb/MANIFEST-000001
-2026/11/18-06:13:04.913 d90 Recovering log #172
-2026/11/18-06:13:04.914 d90 Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Local Storage/leveldb/000172.log 
+2026/11/18-16:59:02.257 ea2 Reusing MANIFEST /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Local Storage/leveldb/MANIFEST-000001
+2026/11/18-16:59:02.258 ea2 Recovering log #172
+2026/11/18-16:59:02.258 ea2 Reusing old log /home/runner/work/asp-bot/asp-bot/state/sessions/account_01/Default/Local Storage/leveldb/000172.log 
+2026/11/18-17:22:20.430 ea6 Level-0 table #176: started
+2026/11/18-17:22:20.431 ea6 Level-0 table #176: 8205 bytes OK
+2026/11/18-17:22:20.432 ea6 Delete type=0 #172
+2026/11/18-17:22:20.433 ea6 Compacting 4@0 + 1@1 files
+2026/11/18-17:22:20.437 ea6 Generated table #177@0: 8859 keys, 154655 bytes
+2026/11/18-17:22:20.437 ea6 Compacted 4@0 + 1@1 files => 154655 bytes
+2026/11/18-17:22:20.438 ea6 compacted to: files[ 0 1 1 0 0 0 0 ]
+2026/11/18-17:22:20.438 ea6 Delete type=2 #167
+2026/11/18-17:22:20.438 ea6 Delete type=2 #173
+2026/11/18-17:22:20.438 ea6 Delete type=2 #176
+2026/11/18-17:22:20.438 ea6 Delete type=2 #170
+2026/11/18-17:22:20.438 ea6 Delete type=2 #164
